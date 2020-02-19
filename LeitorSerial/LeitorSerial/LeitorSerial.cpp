@@ -51,7 +51,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	RegisterClassExW(&wcex);
 
 	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, 1000, 600, nullptr, nullptr, hInstance, nullptr);
+		CW_USEDEFAULT, 0, 700, 700, nullptr, nullptr, hInstance, nullptr);
 
 
 
@@ -183,11 +183,15 @@ DWORD WINAPI Thread(LPVOID lp) {
 			PlotEnable = FALSE;
 		}
 		else {
-			//Plot Configuration
+			/******************Plot Configuration*********************/
+
 			//Window's Title
 			graph.CmdLine("set term wxt title 'GNUPlot'\n");
+			graph.CmdLine("set xzeroaxis lt rgb 'red'");
 			//Plot file
 			graph.CmdLine("plot \"C:/Users/Rafael/Desktop/plot.txt\" with lines\n");
+
+			/*********************************************************/
 			
 		}
 		
@@ -196,9 +200,9 @@ DWORD WINAPI Thread(LPVOID lp) {
 	clock_t begin = clock(), end = 0;
 	for (DWORD status = 0; bRunning && (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
 		end = clock();
-		if (!WaitCommEvent(commPort, &evt, &olr)) {
+		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Chamada para verificar eventos da porta serial
 			if (GetLastError() == ERROR_IO_PENDING) {
-				status = WaitForSingleObject(olr.hEvent, 5000);
+				status = WaitForSingleObject(olr.hEvent, 5000);		//Espera algum evento ser acionado por 5000 milisegundos
 				if (status == WAIT_TIMEOUT) {
 					MessageBox((HWND)lp, L"Conexao expirou durante a leitura!", L"Erro", MB_OK | MB_ICONERROR);
 					break;
@@ -222,13 +226,15 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 		if (evt & EV_RXCHAR) {
 
-			ReadFile(commPort, &dp, sizeof(dp), 0, &olr);			//Retorna FALSE, leitura nao concluida.
-			GetOverlappedResult(commPort, &olr, &readBytes, TRUE);	//Espera a leitura ser feita
-			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	//Verifica integridade dos dados
+			if (!ReadFile(commPort, &dp, sizeof(dp), 0, &olr)) {	  //Retorna FALSE ==> leitura nao concluida.
+				GetOverlappedResult(commPort, &olr, &readBytes, TRUE);//Espera a leitura ser feita
+			}				
+			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	  //Verifica integridade dos dados
 				wsprintf(wbuffer, L"%d", dp.dt);
-				//******Update plot file********
+				/******Update plot file********/
 				if (PlotEnable) {
-					fopen_s(&record, "tmpplot.txt", "a+");
+					fopen_s(&record, "tmpplot", "a+");
+					
 					if (record != NULL) {
 						fprintf(record, "%d\n", dp.dt);
 						fclose(record);
@@ -239,6 +245,10 @@ DWORD WINAPI Thread(LPVOID lp) {
 				/*******************************/
 				SendMessage(lb, LB_ADDSTRING, 0, (LPARAM)wbuffer);
 				ZeroMemory(buffer, 50);
+			}
+			else {
+				//Blocos perdidos, contabilizá-los?
+
 			}
 			memset(&dp, 0, sizeof(dp));
 		}
