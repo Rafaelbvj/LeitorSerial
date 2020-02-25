@@ -15,6 +15,7 @@ private:
     FILE* script;
     string GnuFilePath;
     string scriptcode;
+    char bfr[100];
     Graficos();
     bool fileExist(string const&);
 public:
@@ -59,15 +60,18 @@ inline bool Graficos::fileExist(string const& path) {
     }
     return false;
 }
-inline int Graficos::CmdLine(string const& strcmd) {
+inline int Graficos::CmdLine(string const &strcmd) {
     if (strcmd.empty()) {
         return -1;
     }
     if (!WriteFile(hWritePipe, strcmd.c_str(), strcmd.size(), &written, 0)) {
         return -2;
     }
+    //ReadFile(hReadPipe, bfr, strcmd.size(), &written, 0);
+    
     return 0;
 }
+
  
  
 inline void Graficos::FinishGNUPlotProgram() {

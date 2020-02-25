@@ -5,10 +5,9 @@
 using namespace std;
 typedef struct dataconf {
 	int segs;				//Sampling duration
-	int delaytime;			//Delay for each reading
 	int prec;				//Precision
 	int ganho;				//Gain
-	char *localfile;		//SD file local
+	char localfile[100];		//SD file local
 } DataConf;
 typedef struct data {
 	unsigned char signbegin[4];

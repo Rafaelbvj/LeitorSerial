@@ -22,6 +22,7 @@ bool Graficos::StartGNUPlotProgram(string const& strcmd) {
 	if (!CreateProcessA(GnuFilePath.c_str(),0,0,0,TRUE,NORMAL_PRIORITY_CLASS|CREATE_NO_WINDOW,0,0,&st,&pi)) {
 		return false;
 	}
+
 	return true;
 }
 bool Graficos::StartGNUPlotProgram() {
@@ -32,13 +33,13 @@ bool Graficos::StartGNUPlotProgram() {
 	st.hStdOutput = hWritePipe;
 	st.hStdInput = hReadPipe;
 	st.dwFlags = STARTF_USESTDHANDLES;
-	if (!CreateProcessA(GnuFilePath.c_str(), 0, 0, 0, TRUE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, 0, 0, &st, &pi)) {
+	if (!CreateProcessA(GnuFilePath.c_str(), 0,0, 0, TRUE, NORMAL_PRIORITY_CLASS|CREATE_NO_WINDOW  , 0, 0, &st, &pi)) {
 		return false;
 	}
 	return true;
 }
 
-
+ 
 int Graficos::SetScriptFile(string const& path) {
 	char* f = NULL;
 	long size;
@@ -74,6 +75,7 @@ Graficos::Graficos() {
 	sat.lpSecurityDescriptor = NULL;
 	sat.nLength = sizeof(SECURITY_ATTRIBUTES);
 	char* pf = NULL;
+
 	_dupenv_s(&pf, NULL, "PROGRAMFILES(X86)");
  
 	if (pf) {

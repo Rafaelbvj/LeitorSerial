@@ -26,7 +26,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
 	WNDCLASSEXW wcex;
-
+	   
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -142,16 +142,14 @@ DWORD WINAPI Thread(LPVOID lp) {
 	SendMessage(edt, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
 	dc.prec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
 	dc.ganho = SendMessage(cbGanho, CB_GETCURSEL, 0, 0) + 1;
-	dc.delaytime = wcstol(wbuffer, 0, 10);
 	SendMessage(edt2, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
 	dc.segs = wcstol(wbuffer, 0, 10);
-	dc.localfile = localfile;
+	memcpy(dc.localfile , localfile,strlen(localfile));
 
 	if (dc.segs == 0) {
 		MessageBox((HWND)lp, L"Tempo de amostragem não definido, por padrao a duraçao é de 60 segundos", L"Info", MB_OK | MB_ICONINFORMATION);
 		dc.segs = 60;
 	}
-
 
 	SetCommState(commPort, &cp.dcb);
 	if (WriteFile(commPort, &dc, sizeof(dc), &writeBytes, &olw) == FALSE) {
@@ -172,8 +170,6 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 	if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		PlotEnable = TRUE;
-		fopen_s(&record, "tmpplot.txt", "w");
-		fclose(record);
 		if (graph.IsGNUPlotRunning()) {
 			MessageBox((HWND)lp, L"A ultima instância do GNUPlot sera fechada.", L"Aviso", MB_OK | MB_ICONWARNING);
 			graph.FinishGNUPlotProgram();
@@ -184,21 +180,26 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 		else {
 			/******************Plot Configuration*********************/
-
+			
 			//Window's Title
-			graph.CmdLine("set term wxt title 'GNUPlot'\n");
-			graph.CmdLine("set xzeroaxis lt rgb 'red'");
+			//graph.CmdLine("set term wxt title 'GNUPlot'\n");
+			//graph.CmdLine("set xzeroaxis lt rgb 'red'");
 			//Plot file
-			graph.CmdLine("plot \"C:/Users/Rafael/Desktop/plot.txt\" with lines\n");
-
+			fopen_s(&record, "tmpplot", "w");
+			fprintf(record, "0 0\n");
+			fclose(record);
+			graph.CmdLine("plot \"C:/Users/Rafael/Documents/GitHub/LeitorSerial/LeitorSerial/LeitorSerial/tmpplot\" with lines\n");
+			
 			/*********************************************************/
 			
 		}
 		
 	}
+	
 	SetCommMask(commPort, EV_RXCHAR);
 	clock_t begin = clock(), end = 0;
-	for (DWORD status = 0; bRunning && (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
+	DWORD e = 1;
+	for (DWORD status = 0,i=0; bRunning && (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
 		end = clock();
 		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Chamada para verificar eventos da porta serial
 			if (GetLastError() == ERROR_IO_PENDING) {
@@ -226,21 +227,27 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 		if (evt & EV_RXCHAR) {
 
-			if (!ReadFile(commPort, &dp, sizeof(dp), 0, &olr)) {	  //Retorna FALSE ==> leitura nao concluida.
-				GetOverlappedResult(commPort, &olr, &readBytes, TRUE);//Espera a leitura ser feita
-			}				
+			ReadFile(commPort, &dp, sizeof(dp), 0, &olr);			  //Retorna FALSE ==> leitura nao concluida.
+			GetOverlappedResult(commPort, &olr, &readBytes, TRUE);	  //Espera a leitura ser feita
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	  //Verifica integridade dos dados
 				wsprintf(wbuffer, L"%d", dp.dt);
 				/******Update plot file********/
 				if (PlotEnable) {
-					fopen_s(&record, "tmpplot", "a+");
 					
+					fopen_s(&record, "tmpplot", "a+");
 					if (record != NULL) {
-						fprintf(record, "%d\n", dp.dt);
+					
+						fprintf(record, "%d %d\n",e, dp.dt);
 						fclose(record);
+						i++;
+						e++;
 						//Plot file
-						graph.CmdLine("replot\n");
+						if (i ==20) {
+							graph.CmdLine("replot\n");
+							i = 0;
+						}
 					}
+				 
 				}
 				/*******************************/
 				SendMessage(lb, LB_ADDSTRING, 0, (LPARAM)wbuffer);
@@ -248,12 +255,13 @@ DWORD WINAPI Thread(LPVOID lp) {
 			}
 			else {
 				//Blocos perdidos, contabilizá-los?
-
+	
 			}
 			memset(&dp, 0, sizeof(dp));
 		}
 		InvalidateRect((HWND)lp, &rect, FALSE);
 	}
+	
 	CloseHandle(commPort);
 	EnableWindow(cbPort, TRUE);
 	EnableWindow(rd, TRUE);
@@ -311,9 +319,6 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
 	chk4 = CreateWindowEx(0, WC_BUTTON, L"Volts", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 60, 20, h, (HMENU)1478, hi, 0);
-	edt = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, 0, WS_VISIBLE | WS_CHILD | ES_NUMBER | WS_DISABLED, 15, 210, 150, 20, h, 0, hi, 0);
-	st1 = CreateWindowEx(0, WC_STATIC, L"Delay:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 190, 150, 20, h, 0, hi, 0);
-	st2 = CreateWindowEx(0, WC_STATIC, L"milisegundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 210, 80, 20, h, 0, hi, 0);
 	edt2 = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, 0, WS_VISIBLE | WS_CHILD | ES_NUMBER | WS_DISABLED, 15, 260, 150, 20, h, 0, hi, 0);
 	st3 = CreateWindowEx(0, WC_STATIC, L"Tempo de amostragem:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 240, 160, 20, h, 0, hi, 0);
 	st4 = CreateWindowEx(0, WC_STATIC, L"segundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 260, 80, 20, h, 0, hi, 0);
@@ -540,15 +545,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_DESTROY:
 	{
-		if (graph.IsGNUPlotRunning()) {
-			graph.FinishGNUPlotProgram();
-		}
-		if (GetThreadId(hThread) != 0) {
-			bRunning = FALSE;
-			WaitForSingleObject(hThread, INFINITE);
-			TerminateThread(hThread, 0);
-			CloseHandle(hThread);
-		}
+		graph.FinishGNUPlotProgram();
+		TerminateThread(hThread, 0);
+		CloseHandle(hThread);
+		
 
 		PostQuitMessage(0);
 	}

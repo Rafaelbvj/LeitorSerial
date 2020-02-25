@@ -2,12 +2,11 @@
 #define PD_SCK 2
 #define DOUT 3
 #define PULSOS 24
-const float PRECISAO = 16777216.0f; // 2^24 numeros negativos possiveis ou 2^24 - 1 numeros positivos possíveis
+const float PRECISAO = 8388607.0f; // 2^24 numeros negativos possiveis ou 2^24 - 1 numeros positivos possíveis
 byte data[3];
 long int resultado;
 typedef struct dataconf {
   unsigned long int segs;
-  unsigned long int delaytime;
   unsigned long int prec;
   unsigned long int ganho;
   char localfile[100];
@@ -23,9 +22,10 @@ void setup() {
   pinMode(DOUT, INPUT_PULLUP);
   pinMode(PD_SCK, OUTPUT);
   digitalWrite(PD_SCK, LOW);
+  
 }
 
-float volts;
+float milivolts;
 DataConf dc;
 char br[120];
 byte dts[12];
@@ -38,6 +38,7 @@ void loop() {
     br[i] = Serial.read();
     i++;
     if (i == sizeof(DataConf)) {
+
       memset(&dc, 0, sizeof(dc));
       memcpy(&dc, br, sizeof(DataConf));
       Serial.flush();
@@ -61,8 +62,13 @@ void loop() {
             }
 
             resultado |= (uint32_t)data[0] << 16 | (uint32_t)data[1] << 8 | (uint32_t)data[2];
-            volts = 80 * (resultado / PRECISAO);
-            //Serial.println(resultado);
+            /********Test code********/
+            /*
+            milivolts = 20 * (resultado / PRECISAO);        //em milivolts 20mV ==> Ganho 1, 40mV ==> Ganho 3, 80mB ==> Ganho 2 (Inn B)
+            Serial.print(resultado);
+            Serial.print(" ");
+            Serial.println(milivolts);*/
+            /*************************/
             dp.signbegin[0] = 'B';
             dp.dt = resultado;
             dp.signend[0] = 'E';
@@ -72,7 +78,6 @@ void loop() {
           }
           resultado = 0;
         }
-        delay(dc.delaytime);
         i = 0;
       }
 
