@@ -180,33 +180,34 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 		else {
 			/******************Plot Configuration*********************/
-			
 			//Window's Title
-			//graph.CmdLine("set term wxt title 'GNUPlot'\n");
+			graph.CmdLine("set term wxt title 'GNUPlot - Leitor Serial'\n");
 			//graph.CmdLine("set xzeroaxis lt rgb 'red'");
-			//Plot file
+
+			//Create Plot File
 			fopen_s(&record, "tmpplot", "w");
 			fprintf(record, "0 0\n");
 			fclose(record);
 
-			graph.CmdLine("plot \"C:/Users/Rafael/Documents/GitHub/LeitorSerial/LeitorSerial/LeitorSerial/tmpplot\" every 2 with lines\n");
+			//Open gnuplot window
+			graph.CmdLine("plot \"C:/Users/Rafael/Documents/GitHub/LeitorSerial/LeitorSerial/LeitorSerial/tmpplot\" every 2 with lines lt rgb 'red'\n");
 			
 			/*********************************************************/
-			
 		}
-		
 	}
-	
 	SetCommMask(commPort, EV_RXCHAR);
 	clock_t begin = clock(), end = 0;
 	DWORD e = 0;
 	for (DWORD status = 0,i=0; bRunning && (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
 		end = clock();
-		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Chamada para verificar eventos da porta serial
+		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Verify serial port events
 			if (GetLastError() == ERROR_IO_PENDING) {
-				status = WaitForSingleObject(olr.hEvent, 5000);		//Espera algum evento ser acionado por 5000 milisegundos
+				status = WaitForSingleObject(olr.hEvent, 5000);		//Waits until 5 seconds
 				if (status == WAIT_TIMEOUT) {
 					MessageBox((HWND)lp, L"Conexao expirou durante a leitura!", L"Erro", MB_OK | MB_ICONERROR);
+					if (graph.IsGNUPlotRunning()) {
+						graph.FinishGNUPlotProgram();
+					}
 					break;
 				}
 				if (status == WAIT_FAILED) {
@@ -234,8 +235,6 @@ DWORD WINAPI Thread(LPVOID lp) {
 				wsprintf(wbuffer, L"%d", dp.dt);
 				/******Update plot file********/
 				if (PlotEnable) {
-					
-					
 					record = _fsopen("tmpplot", "a+", SH_DENYNO);
 					if (record != NULL) {
 					
@@ -248,7 +247,6 @@ DWORD WINAPI Thread(LPVOID lp) {
 								graph.CmdLine("replot\n");
 								i = 0;
 							}
-						
 						}
 						else {
 							i = 0;
@@ -261,7 +259,6 @@ DWORD WINAPI Thread(LPVOID lp) {
 				ZeroMemory(buffer, 50);
 			}
 			else {
-				//Blocos perdidos, contabilizá-los?
 				MessageBox((HWND)lp, L"Erro de sincronização, tente novamente.", L"Error", MB_OK | MB_ICONERROR);
 				if (graph.IsGNUPlotRunning()) {
 					graph.FinishGNUPlotProgram();
@@ -330,13 +327,13 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
 	chk4 = CreateWindowEx(0, WC_BUTTON, L"Volts", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 60, 20, h, (HMENU)1478, hi, 0);
-	edt2 = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, 0, WS_VISIBLE | WS_CHILD | ES_NUMBER | WS_DISABLED, 15, 260, 150, 20, h, 0, hi, 0);
-	st3 = CreateWindowEx(0, WC_STATIC, L"Tempo de amostragem:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 240, 160, 20, h, 0, hi, 0);
-	st4 = CreateWindowEx(0, WC_STATIC, L"segundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 260, 80, 20, h, 0, hi, 0);
-	chk2 = CreateWindowEx(0, WC_BUTTON, L"Registro MicroSD", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 280, 150, 20, h, (HMENU)1444, hi, 0);
-	chk3 = CreateWindowEx(0, WC_BUTTON, L"Plot", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 300, 100, 20, h, (HMENU)1445, hi, 0);
-	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 330, 80, 20, h, 0, hi, 0);
-	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 350, 150, 100, h, 0, hi, 0);
+	edt2 = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, 0, WS_VISIBLE | WS_CHILD | ES_NUMBER | WS_DISABLED, 15, 210, 150, 20, h, 0, hi, 0);
+	st3 = CreateWindowEx(0, WC_STATIC, L"Tempo de amostragem:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 190, 160, 20, h, 0, hi, 0);
+	st4 = CreateWindowEx(0, WC_STATIC, L"segundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 210, 80, 20, h, 0, hi, 0);
+	chk2 = CreateWindowEx(0, WC_BUTTON, L"Registro MicroSD", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 230, 150, 20, h, (HMENU)1444, hi, 0);
+	chk3 = CreateWindowEx(0, WC_BUTTON, L"Plot", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 250, 100, 20, h, (HMENU)1445, hi, 0);
+	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 280, 80, 20, h, 0, hi, 0);
+	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 300, 150, 100, h, 0, hi, 0);
 
 
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"1");
@@ -384,8 +381,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_COMMAND:
 	{
-		if (IsWindowEnabled(cbPort)) {
-			AddPortsNametoCB(&cp, cbPort);
+		if (HIWORD(wParam) == CBN_DROPDOWN) {
+			if (IsWindowEnabled(cbPort)) {
+				AddPortsNametoCB(&cp, cbPort);				
+			}
+			 
 		}
 
 		if (wParam == ID_ARQUIVO_SALVAR) {
@@ -395,7 +395,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			ofn.hwndOwner = hWnd;
 			ofn.nMaxFile = MAX_PATH;
 			ofn.lpstrFile = pathfile;
-			ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Texto ANSI (.txt)\0*.*\0\0";
+			ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
 			if (GetSaveFileNameA(&ofn)) {
 				if (ofn.nFilterIndex == 1) {			//Excel extension selected
 					if (ofn.nFileExtension == 0) {
@@ -558,7 +558,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_DESTROY:
 	{
-		graph.FinishGNUPlotProgram();
+
+		if (graph.IsGNUPlotRunning()) {
+			graph.FinishGNUPlotProgram();
+		}
 		TerminateThread(hThread, 0);
 		CloseHandle(hThread);
 		
