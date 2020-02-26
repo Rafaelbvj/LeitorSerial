@@ -19,7 +19,7 @@ bool Graficos::StartGNUPlotProgram(string const& strcmd) {
 	st.hStdOutput = hWritePipe;
 	st.hStdInput = hReadPipe;
 	st.dwFlags = STARTF_USESTDHANDLES;
-	if (!CreateProcessA(GnuFilePath.c_str(),0,0,0,TRUE,NORMAL_PRIORITY_CLASS|CREATE_NO_WINDOW,0,0,&st,&pi)) {
+	if (!CreateProcessA(GnuFilePath.c_str(),0,0,0,TRUE,CREATE_NO_WINDOW,0,0,&st,&pi)) {
 		return false;
 	}
 
@@ -33,7 +33,7 @@ bool Graficos::StartGNUPlotProgram() {
 	st.hStdOutput = hWritePipe;
 	st.hStdInput = hReadPipe;
 	st.dwFlags = STARTF_USESTDHANDLES;
-	if (!CreateProcessA(GnuFilePath.c_str(), 0,0, 0, TRUE, NORMAL_PRIORITY_CLASS|CREATE_NO_WINDOW  , 0, 0, &st, &pi)) {
+	if (!CreateProcessA(GnuFilePath.c_str(), 0,0, 0, TRUE, CREATE_NO_WINDOW  , 0, 0, &st, &pi)) {
 		return false;
 	}
 	return true;

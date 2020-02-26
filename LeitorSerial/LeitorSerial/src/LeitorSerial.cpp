@@ -147,7 +147,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	memcpy(dc.localfile , localfile,strlen(localfile));
 
 	if (dc.segs == 0) {
-		MessageBox((HWND)lp, L"Tempo de amostragem não definido, por padrao a duraçao é de 60 segundos", L"Info", MB_OK | MB_ICONINFORMATION);
+		MessageBox((HWND)lp, L"Tempo de amostragem não definido ou invalido, por padrao a duraçao é de 60 segundos", L"Info", MB_OK | MB_ICONINFORMATION);
 		dc.segs = 60;
 	}
 
@@ -188,7 +188,8 @@ DWORD WINAPI Thread(LPVOID lp) {
 			fopen_s(&record, "tmpplot", "w");
 			fprintf(record, "0 0\n");
 			fclose(record);
-			graph.CmdLine("plot \"C:/Users/Rafael/Documents/GitHub/LeitorSerial/LeitorSerial/LeitorSerial/tmpplot\" with lines\n");
+
+			graph.CmdLine("plot \"C:/Users/Rafael/Documents/GitHub/LeitorSerial/LeitorSerial/LeitorSerial/tmpplot\" every 2 with lines\n");
 			
 			/*********************************************************/
 			
@@ -198,7 +199,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	
 	SetCommMask(commPort, EV_RXCHAR);
 	clock_t begin = clock(), end = 0;
-	DWORD e = 1;
+	DWORD e = 0;
 	for (DWORD status = 0,i=0; bRunning && (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
 		end = clock();
 		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Chamada para verificar eventos da porta serial
@@ -234,16 +235,22 @@ DWORD WINAPI Thread(LPVOID lp) {
 				/******Update plot file********/
 				if (PlotEnable) {
 					
-					fopen_s(&record, "tmpplot", "a+");
+					
+					record = _fsopen("tmpplot", "a+", SH_DENYNO);
 					if (record != NULL) {
 					
 						fprintf(record, "%d %d\n",e, dp.dt);
-						fclose(record);
-						i++;
-						e++;
-						//Plot file
-						if (i ==20) {
-							graph.CmdLine("replot\n");
+						if (!fclose(record)) {
+							i++;		//plot offset
+							e++;		//index order
+							//Plot file
+							if (i == 10) {
+								graph.CmdLine("replot\n");
+								i = 0;
+							}
+						
+						}
+						else {
 							i = 0;
 						}
 					}
@@ -255,7 +262,11 @@ DWORD WINAPI Thread(LPVOID lp) {
 			}
 			else {
 				//Blocos perdidos, contabilizá-los?
-	
+				MessageBox((HWND)lp, L"Erro de sincronização, tente novamente.", L"Error", MB_OK | MB_ICONERROR);
+				if (graph.IsGNUPlotRunning()) {
+					graph.FinishGNUPlotProgram();
+				}
+				break;
 			}
 			memset(&dp, 0, sizeof(dp));
 		}
@@ -373,8 +384,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_COMMAND:
 	{
+		if (IsWindowEnabled(cbPort)) {
+			AddPortsNametoCB(&cp, cbPort);
+		}
 
-		AddPortsNametoCB(&cp, cbPort);
 		if (wParam == ID_ARQUIVO_SALVAR) {
 			ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
 			ofn.lStructSize = sizeof(OPENFILENAMEA);
