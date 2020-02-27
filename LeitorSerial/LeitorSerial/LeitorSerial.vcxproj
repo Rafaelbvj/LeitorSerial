@@ -23,8 +23,8 @@
     <ClInclude Include="include\framework.h" />
     <ClInclude Include="include\Graficos.h" />
     <ClInclude Include="include\LeitorSerial.h" />
-    <ClInclude Include="include\resource.h" />
     <ClInclude Include="include\targetver.h" />
+    <ClInclude Include="res\resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Comm.cpp" />
@@ -92,7 +92,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)$(ProjectName)\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)$(ProjectName)\res;$(SolutionDir)$(ProjectName)\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>

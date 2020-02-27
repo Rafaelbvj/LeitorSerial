@@ -27,10 +27,10 @@
     <ClInclude Include="include\LeitorSerial.h">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
-    <ClInclude Include="include\resource.h">
+    <ClInclude Include="include\targetver.h">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
-    <ClInclude Include="include\targetver.h">
+    <ClInclude Include="res\resource.h">
       <Filter>Arquivos de Cabeçalho</Filter>
     </ClInclude>
   </ItemGroup>

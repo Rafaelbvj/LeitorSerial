@@ -17,6 +17,9 @@
 #define IDC_OPOK                        1002
 #define IDC_EDIT2                       1004
 #define IDC_BAUDRATE                    1004
+#define IDC_BUTTON2                     1005
+#define IDC_SCRIPT                      1005
+#define IDC_COMBO1                      1006
 #define ID_ARQUIVO                      32771
 #define ID_FONTE                        32776
 #define ID_FERRAMENTAS_PORTAS           32777
@@ -32,7 +35,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32785
-#define _APS_NEXT_CONTROL_VALUE         1005
+#define _APS_NEXT_CONTROL_VALUE         1007
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

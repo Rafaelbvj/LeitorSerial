@@ -181,18 +181,9 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 		else {
 			/******************Plot Configuration*********************/
-			//Window's Title
-			graph.CmdLine("set term wxt title 'GNUPlot - Leitor Serial'\n");
-			graph.CmdLine("set xlabel 'Ordem/Numero de leitura'\n");
-			graph.CmdLine("set ylabel 'Sinal Digital - 24 bits'\n");
-			//Create Plot File
-			fopen_s(&record, "tmpplot", "w");
-			fprintf(record, "0 0\n");
-			fclose(record);
-
-			//Open gnuplot window
-			graph.CmdLine("plot \"tmpplot\" every 2 with lines lt rgb 'red' title 'linha' \n");
-
+			//Setting plot features		
+			graph.LoadGNUScript("gnuscript-example.gnu");
+			graph.ExecuteGNUScript(false);
 			/*********************************************************/
 		}
 	}
@@ -230,9 +221,10 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 		if (evt & EV_RXCHAR) {
 
-			ReadFile(commPort, &dp, sizeof(dp), 0, &olr);			  //Retorna FALSE ==> leitura nao concluida.
-			GetOverlappedResult(commPort, &olr, &readBytes, TRUE);	  //Espera a leitura ser feita
-			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	  //Verifica integridade dos dados
+			if (!ReadFile(commPort, &dp, sizeof(dp), 0, &olr)) {
+				GetOverlappedResult(commPort, &olr, &readBytes, TRUE);
+			}
+			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	  
 
 				wsprintf(wbuffer, L"%d", dp.dt);
 				/******Update plot file********/
@@ -242,6 +234,9 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 						fprintf(record, "%d %d\n", e, dp.dt);
 						if (!fclose(record)) {
+							if (e == 0) {
+								graph.CmdLine("plot \"tmpplot\" every 2 with lines lt rgb 'red' title 'linha' \n");
+							}
 							i++;		//plot offset
 							e++;		//index order
 							//Update plot chart
@@ -293,7 +288,19 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 			baudrate = strtol(buffer, 0, 10);
 			SendMessage(h, WM_CLOSE, 0, 0);
 		}
+		if (LOWORD(wParam) == IDC_SCRIPT) {
+			ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.Flags = OFN_FILEMUSTEXIST |OFN_PATHMUSTEXIST | OFN_EXPLORER ;
+			ofn.nMaxFile = MAX_PATH;
+			ofn.lpstrFile = (char*) calloc(MAX_PATH,sizeof(char));
+			ofn.lpstrFilter = "All\0*.*\0";
+			if (GetOpenFileNameA(&ofn)) {
+				graph.LoadGNUScript(ofn.lpstrFile);
+				free(ofn.lpstrFile);
+			}
 
+		}
 	}
 	break;
 	case WM_CLOSE:

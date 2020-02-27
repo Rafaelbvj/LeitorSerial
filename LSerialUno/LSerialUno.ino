@@ -2,7 +2,7 @@
 #define PD_SCK 2
 #define DOUT 3
 #define PULSOS 24
-const float PRECISAO = 8388607.0f; // 2^24 numeros negativos possiveis ou 2^24 - 1 numeros positivos possíveis
+const float PRECISAO = 8388607.0f; // 2^(24-1) numeros negativos possiveis ou 2^(24-1) - 1 numeros positivos possíveis
 byte data[3];
 long int resultado;
 typedef struct dataconf {
@@ -22,7 +22,7 @@ void setup() {
   pinMode(DOUT, INPUT_PULLUP);
   pinMode(PD_SCK, OUTPUT);
   digitalWrite(PD_SCK, LOW);
-  
+
 }
 
 float milivolts;
