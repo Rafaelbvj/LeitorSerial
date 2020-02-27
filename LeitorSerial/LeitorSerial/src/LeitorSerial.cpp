@@ -6,10 +6,6 @@
 
 #define MAX_LOADSTRING 100
 
-#pragma comment(linker,"\"/manifestdependency:type='win32' \
-name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
-processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
@@ -26,7 +22,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
 	WNDCLASSEXW wcex;
-	   
+
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -93,7 +89,7 @@ lxw_workbook* LWb;
 lxw_worksheet* LWs;
 lxw_format* LF;
 
-				//Common controls
+//Common controls
 
 HWND cbPort, cbPrec, cbGanho;				//Combobox's
 HWND edt, edt2;								//Edit
@@ -122,7 +118,6 @@ char pathfile[MAX_PATH];
 
 DWORD WINAPI Thread(LPVOID lp) {
 	bRunning = TRUE;
-
 	ZeroMemory(&olr, sizeof(OVERLAPPED));
 	ZeroMemory(&olw, sizeof(OVERLAPPED));
 	ZeroMemory(&cp, sizeof(COMMPORTS));
@@ -140,12 +135,15 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 
 	SendMessage(edt, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
-	dc.prec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
+	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+		dc.prec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
+	}
 	dc.ganho = SendMessage(cbGanho, CB_GETCURSEL, 0, 0) + 1;
 	SendMessage(edt2, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
-	dc.segs = wcstol(wbuffer, 0, 10);
-	memcpy(dc.localfile , localfile,strlen(localfile));
-
+	int u = dc.segs = wcstol(wbuffer, 0, 10);
+	if (SendMessage(chk2,BM_GETCHECK,0,0) == BST_CHECKED) {
+		memcpy(dc.localfile, localfile, strlen(localfile));
+	}
 	if (dc.segs == 0) {
 		MessageBox((HWND)lp, L"Tempo de amostragem não definido ou invalido, por padrao a duraçao é de 60 segundos", L"Info", MB_OK | MB_ICONINFORMATION);
 		dc.segs = 60;
@@ -183,7 +181,6 @@ DWORD WINAPI Thread(LPVOID lp) {
 			//Window's Title
 			graph.CmdLine("set term wxt title 'GNUPlot - Leitor Serial'\n");
 			//graph.CmdLine("set xzeroaxis lt rgb 'red'");
-
 			//Create Plot File
 			fopen_s(&record, "tmpplot", "w");
 			fprintf(record, "0 0\n");
@@ -191,14 +188,14 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 			//Open gnuplot window
 			graph.CmdLine("plot \"C:/Users/Rafael/Documents/GitHub/LeitorSerial/LeitorSerial/LeitorSerial/tmpplot\" every 2 with lines lt rgb 'red'\n");
-			
+
 			/*********************************************************/
 		}
 	}
 	SetCommMask(commPort, EV_RXCHAR);
 	clock_t begin = clock(), end = 0;
 	DWORD e = 0;
-	for (DWORD status = 0,i=0; bRunning && (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
+	for (DWORD status = 0, i = 0;  (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
 		end = clock();
 		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Verify serial port events
 			if (GetLastError() == ERROR_IO_PENDING) {
@@ -232,27 +229,25 @@ DWORD WINAPI Thread(LPVOID lp) {
 			ReadFile(commPort, &dp, sizeof(dp), 0, &olr);			  //Retorna FALSE ==> leitura nao concluida.
 			GetOverlappedResult(commPort, &olr, &readBytes, TRUE);	  //Espera a leitura ser feita
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	  //Verifica integridade dos dados
+				
 				wsprintf(wbuffer, L"%d", dp.dt);
 				/******Update plot file********/
 				if (PlotEnable) {
-					record = _fsopen("tmpplot", "a+", SH_DENYNO);
+					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file on sharing mode
 					if (record != NULL) {
-					
-						fprintf(record, "%d %d\n",e, dp.dt);
+						 
+						fprintf(record, "%d %d\n", e, dp.dt);
 						if (!fclose(record)) {
 							i++;		//plot offset
 							e++;		//index order
-							//Plot file
+							//Update plot chart
 							if (i == 10) {
 								graph.CmdLine("replot\n");
 								i = 0;
 							}
 						}
-						else {
-							i = 0;
-						}
 					}
-				 
+
 				}
 				/*******************************/
 				SendMessage(lb, LB_ADDSTRING, 0, (LPARAM)wbuffer);
@@ -268,8 +263,8 @@ DWORD WINAPI Thread(LPVOID lp) {
 			memset(&dp, 0, sizeof(dp));
 		}
 		InvalidateRect((HWND)lp, &rect, FALSE);
-	}
-	
+	} 
+	bRunning = FALSE;
 	CloseHandle(commPort);
 	EnableWindow(cbPort, TRUE);
 	EnableWindow(rd, TRUE);
@@ -326,7 +321,7 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 400, h, (HMENU)1407, hi, 0);
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
-	chk4 = CreateWindowEx(0, WC_BUTTON, L"Volts", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 60, 20, h, (HMENU)1478, hi, 0);
+	chk4 = CreateWindowEx(0, WC_BUTTON, L"Tensão", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 70, 20, h, (HMENU)1478, hi, 0);
 	edt2 = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, 0, WS_VISIBLE | WS_CHILD | ES_NUMBER | WS_DISABLED, 15, 210, 150, 20, h, 0, hi, 0);
 	st3 = CreateWindowEx(0, WC_STATIC, L"Tempo de amostragem:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 190, 160, 20, h, 0, hi, 0);
 	st4 = CreateWindowEx(0, WC_STATIC, L"segundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 210, 80, 20, h, 0, hi, 0);
@@ -383,9 +378,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		if (HIWORD(wParam) == CBN_DROPDOWN) {
 			if (IsWindowEnabled(cbPort)) {
-				AddPortsNametoCB(&cp, cbPort);				
+				AddPortsNametoCB(&cp, cbPort);
 			}
-			 
+
 		}
 
 		if (wParam == ID_ARQUIVO_SALVAR) {
@@ -519,7 +514,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	break;
 	case WM_CTLCOLORSTATIC:
-	{	
+	{
 		if (hBrush == NULL) {
 			hBrush = CreateSolidBrush(RGB(255, 255, 255));			//Setting all component's background colors to white
 		}
@@ -556,19 +551,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		UpdateWindow(hWnd);
 	}
 	break;
-	case WM_DESTROY:
+	case WM_CLOSE:
 	{
-
+		if (bRunning) {
+			if (MessageBox(hWnd, L"O programa está em execução. Tem certeza que deseja sair?", L"Aviso", MB_YESNO | MB_ICONEXCLAMATION) == IDNO) {
+				return 0;
+			}
+			
+		}
 		if (graph.IsGNUPlotRunning()) {
 			graph.FinishGNUPlotProgram();
 		}
 		TerminateThread(hThread, 0);
 		CloseHandle(hThread);
-		
-
-		PostQuitMessage(0);
+		DestroyWindow(hWnd);
 	}
 	break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
