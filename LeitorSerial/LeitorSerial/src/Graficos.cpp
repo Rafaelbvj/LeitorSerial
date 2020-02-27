@@ -75,9 +75,7 @@ Graficos::Graficos() {
 	sat.lpSecurityDescriptor = NULL;
 	sat.nLength = sizeof(SECURITY_ATTRIBUTES);
 	char* pf = NULL;
-
-	_dupenv_s(&pf, NULL, "PROGRAMFILES(X86)");
- 
+	_dupenv_s(&pf, NULL, "PROGRAMFILES");
 	if (pf) {
 		GnuFilePath.append(pf);
 		GnuFilePath.append("\\gnuplot\\bin\\gnuplot.exe");
