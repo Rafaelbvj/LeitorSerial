@@ -181,10 +181,12 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 		else {
 			/******************Plot Configuration*********************/
+			
 			//Setting plot features		
-			graph.LoadGNUScript("gnuscript-example.gnu");
-			graph.ExecuteGNUScript(false);
+			graph.GNUScript("gnuscript-example.gnu");
 			/*********************************************************/
+			fopen_s(&record, "tmpplot", "w");
+			fclose(record);
 		}
 	}
 	SetCommMask(commPort, EV_RXCHAR);
@@ -296,7 +298,9 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 			ofn.lpstrFile = (char*) calloc(MAX_PATH,sizeof(char));
 			ofn.lpstrFilter = "All\0*.*\0";
 			if (GetOpenFileNameA(&ofn)) {
-				graph.LoadGNUScript(ofn.lpstrFile);
+				
+				
+				
 				free(ofn.lpstrFile);
 			}
 

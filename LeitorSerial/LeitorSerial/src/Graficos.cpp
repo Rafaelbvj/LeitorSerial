@@ -7,34 +7,14 @@ Graficos& Graficos::GetInstanceGNUPlot() {
 	}
 	return *gr;
 }
-bool Graficos::LoadGNUScript(const char* path)
-{
-	fopen_s(&script, path, "rb");
-	if (script == NULL) {
+
+bool Graficos::GNUScript(string const& str) {
+	if(!fileExist(str) || !IsGNUPlotRunning()) {
 		return false;
 	}
-	fseek(script, 0, SEEK_END);
-	scriptcode.size = ftell(script);
-	if (scriptcode.size < 1) {			//No data or error
+	op = "load '" + str + "'" + "\n";
+	if (!WriteFile(hWritePipe, op.c_str(), op.size(), &written, 0)) {
 		return false;
-	}
-	scriptcode.data = (char*)malloc(sizeof(char) * scriptcode.size);
-	rewind(script);
-	do {
-		fread(scriptcode.data, sizeof(char), scriptcode.size, script);
-	} while (!feof(script)&&!ferror(script));
-	fclose(script);
-	return true;
-}
-bool Graficos::ExecuteGNUScript(bool keeponmem) {
-	if(scriptcode.data == NULL || !IsGNUPlotRunning()) {
-		return false;
-	}
-	if (!WriteFile(hWritePipe, scriptcode.data, scriptcode.size, &written, 0)) {
-		return false;
-	}
-	if (!keeponmem) {
-		free(scriptcode.data);
 	}
 	return true;
 	
@@ -75,7 +55,6 @@ Graficos::Graficos() {
 	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 	ZeroMemory(&st, sizeof(STARTUPINFO));
 	ZeroMemory(&sat, sizeof(SECURITY_ATTRIBUTES));
-	ZeroMemory(&scriptcode, sizeof(FileRead));
 	sat.bInheritHandle = TRUE;
 	sat.lpSecurityDescriptor = NULL;
 	sat.nLength = sizeof(SECURITY_ATTRIBUTES);

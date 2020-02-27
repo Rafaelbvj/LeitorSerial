@@ -6,10 +6,7 @@ using namespace std;
 
 class Graficos {
 private:
-	typedef struct fileread {
-		char* data;
-		long size;
-	}FileRead;
+
 	static Graficos* gr;
 	PROCESS_INFORMATION pi;
 	STARTUPINFOA st;
@@ -17,7 +14,7 @@ private:
 	HANDLE hWritePipe, hReadPipe;
 	DWORD exitcode;
 	FILE* script;
-	FileRead scriptcode;
+	string op;
 	string GnuFilePath;
 	char* CurrentDirectory;
 	Graficos();
@@ -31,8 +28,8 @@ public:
 	inline int SetGnuFilePath(string const&);
 	inline void FinishGNUPlotProgram();
 	inline bool IsGNUPlotRunning();
-	bool ExecuteGNUScript(bool);
-	bool LoadGNUScript(const char*);
+	bool GNUScript(string const&);
+
 	~Graficos();
 
 
