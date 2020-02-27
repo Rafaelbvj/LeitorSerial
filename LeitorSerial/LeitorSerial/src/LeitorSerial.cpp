@@ -16,8 +16,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_ LPWSTR    lpCmdLine,
 	_In_ int       nCmdShow)
 {
+	
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
+	
 	InitCommonControls();
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
@@ -88,6 +90,7 @@ HBRUSH hBrush;
 lxw_workbook* LWb;
 lxw_worksheet* LWs;
 lxw_format* LF;
+FILE* record;
 
 //Common controls
 
@@ -141,7 +144,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	dc.ganho = SendMessage(cbGanho, CB_GETCURSEL, 0, 0) + 1;
 	SendMessage(edt2, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
 	int u = dc.segs = wcstol(wbuffer, 0, 10);
-	if (SendMessage(chk2,BM_GETCHECK,0,0) == BST_CHECKED) {
+	if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		memcpy(dc.localfile, localfile, strlen(localfile));
 	}
 	if (dc.segs == 0) {
@@ -164,7 +167,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	}
 	ZeroMemory(wbuffer, sizeof(wbuffer));
 	BOOL PlotEnable = FALSE;
-	FILE* record;
+
 
 	if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		PlotEnable = TRUE;
@@ -180,14 +183,15 @@ DWORD WINAPI Thread(LPVOID lp) {
 			/******************Plot Configuration*********************/
 			//Window's Title
 			graph.CmdLine("set term wxt title 'GNUPlot - Leitor Serial'\n");
-			//graph.CmdLine("set xzeroaxis lt rgb 'red'");
+			graph.CmdLine("set xlabel 'Ordem/Numero de leitura'\n");
+			graph.CmdLine("set ylabel 'Sinal Digital - 24 bits'\n");
 			//Create Plot File
 			fopen_s(&record, "tmpplot", "w");
 			fprintf(record, "0 0\n");
 			fclose(record);
 
 			//Open gnuplot window
-			graph.CmdLine("plot \"C:/Users/Rafael/Documents/GitHub/LeitorSerial/LeitorSerial/LeitorSerial/tmpplot\" every 2 with lines lt rgb 'red'\n");
+			graph.CmdLine("plot \"tmpplot\" every 2 with lines lt rgb 'red' title 'linha' \n");
 
 			/*********************************************************/
 		}
@@ -195,7 +199,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	SetCommMask(commPort, EV_RXCHAR);
 	clock_t begin = clock(), end = 0;
 	DWORD e = 0;
-	for (DWORD status = 0, i = 0;  (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
+	for (DWORD status = 0, i = 0; (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
 		end = clock();
 		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Verify serial port events
 			if (GetLastError() == ERROR_IO_PENDING) {
@@ -229,13 +233,13 @@ DWORD WINAPI Thread(LPVOID lp) {
 			ReadFile(commPort, &dp, sizeof(dp), 0, &olr);			  //Retorna FALSE ==> leitura nao concluida.
 			GetOverlappedResult(commPort, &olr, &readBytes, TRUE);	  //Espera a leitura ser feita
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	  //Verifica integridade dos dados
-				
+
 				wsprintf(wbuffer, L"%d", dp.dt);
 				/******Update plot file********/
 				if (PlotEnable) {
 					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file on sharing mode
 					if (record != NULL) {
-						 
+
 						fprintf(record, "%d %d\n", e, dp.dt);
 						if (!fclose(record)) {
 							i++;		//plot offset
@@ -263,7 +267,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 			memset(&dp, 0, sizeof(dp));
 		}
 		InvalidateRect((HWND)lp, &rect, FALSE);
-	} 
+	}
 	bRunning = FALSE;
 	CloseHandle(commPort);
 	EnableWindow(cbPort, TRUE);
@@ -380,7 +384,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (IsWindowEnabled(cbPort)) {
 				AddPortsNametoCB(&cp, cbPort);
 			}
-
 		}
 
 		if (wParam == ID_ARQUIVO_SALVAR) {
@@ -400,17 +403,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					LWs = workbook_add_worksheet(LWb, "Leitor Serial");
 					LF = workbook_add_format(LWb);
 					int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
-					for (int i = 0; i < qtLb; i++) {
-						SendMessageA(lb, WM_GETTEXT, i, (LPARAM)buffer);
-						worksheet_write_string(LWs, i, 1, buffer, LF);
-
+					if (qtLb > 0) {
+						for (long i = 0,c ; i < qtLb; i++) {
+							SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
+							c = strtol(buffer, 0, 10);
+							worksheet_write_number(LWs, i, 0, i, LF);
+							worksheet_write_number(LWs, i, 1, c, LF);
+						}
 					}
+					
 					workbook_close(LWb);
 				}
 				if (ofn.nFilterIndex == 2) {			//txt extension selected
 					if (ofn.nFileExtension == 0) {
 						sprintf_s(pathfile, "%s.txt", pathfile);
 					}
+					int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
+					fopen_s(&record, pathfile, "w");
+					if (record == NULL) {
+						MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
+						return -1;
+					}
+					if (qtLb > 0) {
+						for (int i = 0; i < qtLb; i++) {
+							SendMessageA(lb, WM_GETTEXT, i, (LPARAM)buffer);
+							fprintf(record, "%s\n", buffer);
+
+						}						
+					}
+					fclose(record);
 				}
 
 
@@ -557,7 +578,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (MessageBox(hWnd, L"O programa está em execução. Tem certeza que deseja sair?", L"Aviso", MB_YESNO | MB_ICONEXCLAMATION) == IDNO) {
 				return 0;
 			}
-			
+
 		}
 		if (graph.IsGNUPlotRunning()) {
 			graph.FinishGNUPlotProgram();

@@ -12,14 +12,14 @@ bool Graficos::StartGNUPlotProgram(string const& strcmd) {
 	GnuFilePath.append(strcmd);
 
 	if (!CreatePipe(&hReadPipe, &hWritePipe, &sat, 0)) {
-		
+
 		return false;
 	}
 	st.hStdError = hWritePipe;
 	st.hStdOutput = hWritePipe;
 	st.hStdInput = hReadPipe;
 	st.dwFlags = STARTF_USESTDHANDLES;
-	if (!CreateProcessA(GnuFilePath.c_str(),0,0,0,TRUE,CREATE_NO_WINDOW,0,0,&st,&pi)) {
+	if (!CreateProcessA(GnuFilePath.c_str(), 0, 0, 0, TRUE, CREATE_NO_WINDOW, 0, 0, &st, &pi)) {
 		return false;
 	}
 
@@ -33,39 +33,12 @@ bool Graficos::StartGNUPlotProgram() {
 	st.hStdOutput = hWritePipe;
 	st.hStdInput = hReadPipe;
 	st.dwFlags = STARTF_USESTDHANDLES;
-	if (!CreateProcessA(GnuFilePath.c_str(), 0,0, 0, TRUE, CREATE_NO_WINDOW  , 0, 0, &st, &pi)) {
+	if (!CreateProcessA(GnuFilePath.c_str(), 0, 0, 0, TRUE, CREATE_NO_WINDOW, 0, CurrentDirectory, &st, &pi)) {
 		return false;
 	}
 	return true;
 }
 
- 
-int Graficos::SetScriptFile(string const& path) {
-	char* f = NULL;
-	long size;
-	if (fileExist(path)) {
-		fopen_s(&script, path.c_str(), "rb");
-		if (script == NULL){
-			return -2;
-		}
-		fseek(script, 0, SEEK_END);
-		size = ftell(script);
-		rewind(script);
-		
-		f = (char*)malloc(sizeof(char) * size);
-		if (f) {
-			if (fread(f, sizeof(char), size, script) == size) {
-				scriptcode = f;
-				fclose(script);
-				free(f);
-				return size;
-			}
-		}
-	}
-	free(f);
-	return -1;
-
-}
 
 Graficos::Graficos() {
 	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
@@ -74,14 +47,16 @@ Graficos::Graficos() {
 	sat.bInheritHandle = TRUE;
 	sat.lpSecurityDescriptor = NULL;
 	sat.nLength = sizeof(SECURITY_ATTRIBUTES);
-	char* pf = NULL;
-	_dupenv_s(&pf, NULL, "PROGRAMFILES");
-	if (pf) {
-		GnuFilePath.append(pf);
-		GnuFilePath.append("\\gnuplot\\bin\\gnuplot.exe");
+	CurrentDirectory = NULL;
+	_dupenv_s(&CurrentDirectory, NULL, "PROGRAMFILES");
+	if (CurrentDirectory) {
+		GnuFilePath.append(CurrentDirectory);
+		GnuFilePath.append("\\gnuplot\\bin\\gnuplot.exe");	//Default installation path
 	}
-	free(pf);
+	free(CurrentDirectory);
+	CurrentDirectory = (char*)malloc(sizeof(char) * MAX_PATH);
+	GetCurrentDirectoryA(MAX_PATH, CurrentDirectory);
 }
 Graficos::~Graficos() {
-	
+	free(CurrentDirectory);
 }
