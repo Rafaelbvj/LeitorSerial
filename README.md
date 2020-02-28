@@ -1,8 +1,8 @@
 # LeitorSerial
-LeitorSerial is a software to read serial commands from Arduino Uno SPI.  
-Compiles for x86 or x64 bits.  
+LeitorSerial is a software to read serial commands and data from Arduino Uno SPI using HX711 ADC signal set up for a strain gauge.  
+Compiles for windows x86 or x64 bits.  
 Visual Studio 2019 --- solution version ---.  
 Dependencies:  
 - **libxslxwriter**  
-- **zlib**  
+- **zlib**
 - **gnuplot binary for windows 32 bits**  
