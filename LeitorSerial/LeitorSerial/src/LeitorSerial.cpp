@@ -94,10 +94,10 @@ FILE* record;
 
 //Common controls
 
-HWND cbPort, cbPrec, cbGanho;				//Combobox's
-HWND edt, edt2;								//Edit
-HWND rd, rd2, lb, chk1, chk2, chk3, chk4;	//Buttons
-HWND st, st1, st2, st3, st4, st5;			//Statics
+HWND cbPort, cbPrec, cbGanho;					//Combobox's
+HWND edt, edt2;									//Edit
+HWND rd, rd2, rd3, lb, chk1, chk2, chk3, chk4;	//Buttons
+HWND st, st1, st2, st3, st4, st5;				//Statics
 
 //Plot vars
 auto& graph = Graficos::GetInstanceGNUPlot();
@@ -118,6 +118,7 @@ BOOL bRunning;
 char localfile[100] = { "teste.txt" };
 int baudrate = 9600;
 char pathfile[MAX_PATH];
+string scripttoload = "gnuscript-example.gnu"; // Default
 
 DWORD WINAPI Thread(LPVOID lp) {
 	bRunning = TRUE;
@@ -183,7 +184,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 			/******************Plot Configuration*********************/
 			
 			//Setting plot features		
-			graph.GNUScript("gnuscript-example.gnu");
+			graph.GNUScript(scripttoload);
 			/*********************************************************/
 			fopen_s(&record, "tmpplot", "w");
 			fclose(record);
@@ -283,27 +284,39 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 		break;
 	case WM_COMMAND:
 	{
-		if (LOWORD(wParam) == IDC_OPOK) {
-			memset(localfile, 0, sizeof(localfile));
-			SendMessageA(GetDlgItem(h, IDC_EDIT1), WM_GETTEXT, 100, (LPARAM)localfile);
-			SendMessageA(GetDlgItem(h, IDC_BAUDRATE), WM_GETTEXT, 50, (LPARAM)buffer);
-			baudrate = strtol(buffer, 0, 10);
-			SendMessage(h, WM_CLOSE, 0, 0);
-		}
-		if (LOWORD(wParam) == IDC_SCRIPT) {
-			ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
-			ofn.lStructSize = sizeof(ofn);
-			ofn.Flags = OFN_FILEMUSTEXIST |OFN_PATHMUSTEXIST | OFN_EXPLORER ;
-			ofn.nMaxFile = MAX_PATH;
-			ofn.lpstrFile = (char*) calloc(MAX_PATH,sizeof(char));
-			ofn.lpstrFilter = "All\0*.*\0";
-			if (GetOpenFileNameA(&ofn)) {
-				
-				
-				
-				free(ofn.lpstrFile);
+		if (HIWORD(wParam) == 0) {
+			if (LOWORD(wParam) == IDC_OPOK) {
+				memset(localfile, 0, sizeof(localfile));
+				SendMessageA(GetDlgItem(h, IDC_EDIT1), WM_GETTEXT, 100, (LPARAM)localfile);
+				SendMessageA(GetDlgItem(h, IDC_BAUDRATE), WM_GETTEXT, 50, (LPARAM)buffer);
+				baudrate = strtol(buffer, 0, 10);
+				SendMessage(h, WM_CLOSE, 0, 0);
 			}
-
+			if (LOWORD(wParam) == IDC_SCRIPT) {
+				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+				ofn.lStructSize = sizeof(ofn);
+				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.hwndOwner = h;
+				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
+				ofn.lpstrFilter = "All\0*.*\0";
+				if (GetOpenFileNameA(&ofn)) {
+					scripttoload = ofn.lpstrFile;
+				}
+			}
+			if (LOWORD(wParam) == IDC_GNUFILE) {
+				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+				ofn.lStructSize = sizeof(ofn);
+				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.hwndOwner = h;
+				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
+				ofn.lpstrFilter = "Exe\0*.exe\0";
+				if (GetOpenFileNameA(&ofn)) {					
+					graph.SetGnuFilePath(ofn.lpstrFile);
+					
+				}
+			}
 		}
 	}
 	break;
@@ -314,9 +327,7 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 		return 0;
 	}
-	default:
-		return DefWindowProc(h, msg, wParam, lParam);
-
+ 
 	}
 	return 0;
 }
@@ -333,7 +344,7 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	rd = CreateWindowEx(0, WC_BUTTON, L"Conectar", WS_VISIBLE | WS_CHILD, 10, 50, 100, 25, h, (HMENU)1404, hi, 0);
 	rd2 = CreateWindowEx(0, WC_BUTTON, L"Iniciar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 10, 520, 100, 25, h, (HMENU)1405, hi, 0);
 	lb = CreateWindowEx(0, WC_LISTBOX, 0, WS_VISIBLE | WS_CHILD | LBS_STANDARD | LBS_HASSTRINGS | LBS_NOTIFY, 300, 110, 300, 500, h, 0, hi, 0);
-	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 400, h, (HMENU)1407, hi, 0);
+	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 300, h, (HMENU)1407, hi, 0);
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
 	chk4 = CreateWindowEx(0, WC_BUTTON, L"Tensão", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 70, 20, h, (HMENU)1478, hi, 0);
@@ -342,6 +353,7 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	st4 = CreateWindowEx(0, WC_STATIC, L"segundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 210, 80, 20, h, 0, hi, 0);
 	chk2 = CreateWindowEx(0, WC_BUTTON, L"Registro MicroSD", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 230, 150, 20, h, (HMENU)1444, hi, 0);
 	chk3 = CreateWindowEx(0, WC_BUTTON, L"Plot", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 250, 100, 20, h, (HMENU)1445, hi, 0);
+	rd3 = CreateWindowEx(0, WC_BUTTON, L"Desconectar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 130, 520, 100, 25, h, (HMENU)1406, hi, 0);
 	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 280, 80, 20, h, 0, hi, 0);
 	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 300, 150, 100, h, 0, hi, 0);
 
@@ -359,6 +371,7 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	sysFont = (HFONT)CreateFontIndirect(&ncm.lfMessageFont);
 	SendMessage(rd, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(rd2, WM_SETFONT, (WPARAM)sysFont, 0);
+	SendMessage(rd3, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(st, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(st1, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(st2, WM_SETFONT, (WPARAM)sysFont, 0);
@@ -396,152 +409,177 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				AddPortsNametoCB(&cp, cbPort);
 			}
 		}
-
-		if (wParam == ID_ARQUIVO_SALVAR) {
-			ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
-			ofn.lStructSize = sizeof(OPENFILENAMEA);
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_EXPLORER;
-			ofn.hwndOwner = hWnd;
-			ofn.nMaxFile = MAX_PATH;
-			ofn.lpstrFile = pathfile;
-			ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
-			if (GetSaveFileNameA(&ofn)) {
-				if (ofn.nFilterIndex == 1) {			//Excel extension selected
-					if (ofn.nFileExtension == 0) {
-						sprintf_s(pathfile, "%s.xlsx", pathfile);
-					}
-					LWb = workbook_new(pathfile);
-					LWs = workbook_add_worksheet(LWb, "Leitor Serial");
-					LF = workbook_add_format(LWb);
-					int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
-					if (qtLb > 0) {
-						for (long i = 0,c ; i < qtLb; i++) {
-							SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
-							c = strtol(buffer, 0, 10);
-							worksheet_write_number(LWs, i, 0, i, LF);
-							worksheet_write_number(LWs, i, 1, c, LF);
+		if (HIWORD(wParam) == 0) {
+			if (wParam == ID_ARQUIVO_SALVAR) {
+				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+				ofn.lStructSize = sizeof(OPENFILENAMEA);
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_EXPLORER;
+				ofn.hwndOwner = hWnd;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.lpstrFile = pathfile;
+				ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
+				if (GetSaveFileNameA(&ofn)) {
+					if (ofn.nFilterIndex == 1) {			//Excel extension selected
+						if (ofn.nFileExtension == 0) {
+							sprintf_s(pathfile, "%s.xlsx", pathfile);
 						}
+						LWb = workbook_new(pathfile);
+						LWs = workbook_add_worksheet(LWb, "Leitor Serial");
+						LF = workbook_add_format(LWb);
+						int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
+						if (qtLb > 0) {
+							for (long i = 0, c; i < qtLb; i++) {
+								SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
+								c = strtol(buffer, 0, 10);
+								worksheet_write_number(LWs, i, 0, i, LF);
+								worksheet_write_number(LWs, i, 1, c, LF);
+							}
+						}
+
+						workbook_close(LWb);
 					}
-					
-					workbook_close(LWb);
+					if (ofn.nFilterIndex == 2) {			//txt extension selected
+						if (ofn.nFileExtension == 0) {
+							sprintf_s(pathfile, "%s.txt", pathfile);
+						}
+						int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
+						fopen_s(&record, pathfile, "w");
+						if (record == NULL) {
+							MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
+							return -1;
+						}
+						if (qtLb > 0) {
+							for (int i = 0; i < qtLb; i++) {
+								SendMessageA(lb, WM_GETTEXT, i, (LPARAM)buffer);
+								fprintf(record, "%s\n", buffer);
+
+							}
+						}
+						fclose(record);
+					}
+
+
 				}
-				if (ofn.nFilterIndex == 2) {			//txt extension selected
-					if (ofn.nFileExtension == 0) {
-						sprintf_s(pathfile, "%s.txt", pathfile);
-					}
-					int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
-					fopen_s(&record, pathfile, "w");
-					if (record == NULL) {
-						MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
-						return -1;
-					}
-					if (qtLb > 0) {
-						for (int i = 0; i < qtLb; i++) {
-							SendMessageA(lb, WM_GETTEXT, i, (LPARAM)buffer);
-							fprintf(record, "%s\n", buffer);
 
-						}						
-					}
-					fclose(record);
+
+			}
+			if (wParam == 1444) {
+				if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+					SendMessage(chk2, BM_SETCHECK, BST_UNCHECKED, 0);
+				}
+				else {
+					SendMessage(chk2, BM_SETCHECK, BST_CHECKED, 0);
+				}
+			}
+			if (wParam == 1445) {
+				if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+					SendMessage(chk3, BM_SETCHECK, BST_UNCHECKED, 0);
+				}
+				else {
+					SendMessage(chk3, BM_SETCHECK, BST_CHECKED, 0);
+				}
+			}
+			if (wParam == 1478) {
+				if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+					SendMessage(chk4, BM_SETCHECK, BST_UNCHECKED, 0);
+					EnableWindow(cbPrec, FALSE);
+				}
+				else {
+					EnableWindow(cbPrec, TRUE);
+					SendMessage(chk4, BM_SETCHECK, BST_CHECKED, 0);
+				}
+			}
+			if (wParam == ID_OP) {
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_FORMVIEW), hWnd, DialogOP);
+
+			}
+			if (wParam == ID_FONTE) {
+
+				ZeroMemory(&lpc, sizeof(lpc));
+				lpc.lStructSize = sizeof(CHOOSEFONT);
+				lpc.Flags = CF_EFFECTS | CF_SCREENFONTS;
+				lpc.hwndOwner = 0;
+				lpc.lpLogFont = &logF;
+				if (ChooseFont(&lpc) == TRUE) {
+					textColor = lpc.rgbColors;
+					hFont = CreateFontIndirect(&logF);
+					InvalidateRect(hWnd, 0, TRUE);
 				}
 
 
 			}
+			if (wParam == 1406) {
+				CloseHandle(commPort);
 
-
-		}
-		if (wParam == 1444) {
-			if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-				SendMessage(chk2, BM_SETCHECK, BST_UNCHECKED, 0);
-			}
-			else {
-				SendMessage(chk2, BM_SETCHECK, BST_CHECKED, 0);
-			}
-		}
-		if (wParam == 1445) {
-			if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-				SendMessage(chk3, BM_SETCHECK, BST_UNCHECKED, 0);
-			}
-			else {
-				SendMessage(chk3, BM_SETCHECK, BST_CHECKED, 0);
-			}
-		}
-		if (wParam == 1478) {
-			if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-				SendMessage(chk4, BM_SETCHECK, BST_UNCHECKED, 0);
+				EnableWindow(cbPort, TRUE);				
 				EnableWindow(cbPrec, FALSE);
+				EnableWindow(cbGanho, FALSE);
+				EnableWindow(rd, TRUE);
+				EnableWindow(rd2, FALSE);
+				EnableWindow(rd3, FALSE);
+				EnableWindow(edt, FALSE);
+				EnableWindow(edt2, FALSE);
+				EnableWindow(st, FALSE);
+				EnableWindow(st1, FALSE);
+				EnableWindow(st2, FALSE);
+				EnableWindow(st3, FALSE);
+				EnableWindow(st4, FALSE);
+				EnableWindow(st5, FALSE);
+				EnableWindow(chk2, FALSE);
+				EnableWindow(chk3, FALSE);
+				EnableWindow(chk3, FALSE);
+				EnableWindow(chk4, FALSE);
 			}
-			else {
-				EnableWindow(cbPrec, TRUE);
-				SendMessage(chk4, BM_SETCHECK, BST_CHECKED, 0);
-			}
-		}
-		if (wParam == ID_OP) {
-			DialogBox(hInst, MAKEINTRESOURCE(IDD_FORMVIEW), hWnd, DialogOP);
+			if (wParam == 1404) {
 
-		}
-		if (wParam == ID_FONTE) {
+				SendMessage(lb, LB_RESETCONTENT, 0, 0);
+				nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
+				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
+				commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
+				if (commPort == INVALID_HANDLE_VALUE) {
+					MessageBox(0, L"Erro ao conectar a porta", L"Erro", MB_OK | MB_ICONERROR);
 
-			ZeroMemory(&lpc, sizeof(lpc));
-			lpc.lStructSize = sizeof(CHOOSEFONT);
-			lpc.Flags = CF_EFFECTS | CF_SCREENFONTS;
-			lpc.hwndOwner = 0;
-			lpc.lpLogFont = &logF;
-			if (ChooseFont(&lpc) == TRUE) {
-				textColor = lpc.rgbColors;
-				hFont = CreateFontIndirect(&logF);
-				InvalidateRect(hWnd, 0, TRUE);
-			}
+				}
+				else {
+					EnableWindow(rd, FALSE);
+					EnableWindow(rd2, TRUE);
+					EnableWindow(rd3, TRUE);
+					EnableWindow(cbPort, FALSE);
+					EnableWindow(cbGanho, TRUE);
+					EnableWindow(edt, TRUE);
+					EnableWindow(edt2, TRUE);
+					EnableWindow(st, TRUE);
+					EnableWindow(st1, TRUE);
+					EnableWindow(st2, TRUE);
+					EnableWindow(st3, TRUE);
+					EnableWindow(st4, TRUE);
+					EnableWindow(st5, TRUE);
+					EnableWindow(chk2, TRUE);
+					EnableWindow(chk3, TRUE);
+					EnableWindow(chk4, TRUE);
 
-
-		}
-		if (wParam == 1404) {
-
-			SendMessage(lb, LB_RESETCONTENT, 0, 0);
-			nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
-			SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
-			commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
-			if (commPort == INVALID_HANDLE_VALUE) {
-				MessageBox(0, L"Erro ao conectar a porta", L"Erro", MB_OK | MB_ICONERROR);
-
-			}
-			else {
-				EnableWindow(rd, FALSE);
-				EnableWindow(rd2, TRUE);
-				EnableWindow(cbPort, FALSE);
-				EnableWindow(cbGanho, TRUE);
-				EnableWindow(edt, TRUE);
-				EnableWindow(edt2, TRUE);
-				EnableWindow(st, TRUE);
-				EnableWindow(st1, TRUE);
-				EnableWindow(st2, TRUE);
-				EnableWindow(st3, TRUE);
-				EnableWindow(st4, TRUE);
-				EnableWindow(st5, TRUE);
-				EnableWindow(chk2, TRUE);
-				EnableWindow(chk3, TRUE);
-				EnableWindow(chk4, TRUE);
+				}
 
 			}
-
-		}
-		if (wParam == 1405) {
-			EnableWindow(cbPrec, FALSE);
-			EnableWindow(cbGanho, FALSE);
-			EnableWindow(rd2, FALSE);
-			EnableWindow(edt, FALSE);
-			EnableWindow(edt2, FALSE);
-			EnableWindow(st, FALSE);
-			EnableWindow(st1, FALSE);
-			EnableWindow(st2, FALSE);
-			EnableWindow(st3, FALSE);
-			EnableWindow(st4, FALSE);
-			EnableWindow(st5, FALSE);
-			EnableWindow(chk2, FALSE);
-			EnableWindow(chk3, FALSE);
-			EnableWindow(chk3, FALSE);
-			EnableWindow(chk4, FALSE);
-			hThread = CreateThread(0, 0, Thread, (LPVOID)hWnd, CREATE_ALWAYS, &idThread);
+			if (wParam == 1405) {
+				EnableWindow(cbPrec, FALSE);
+				EnableWindow(cbGanho, FALSE);
+				EnableWindow(rd2, FALSE);
+				EnableWindow(rd3, FALSE);
+				EnableWindow(edt, FALSE);
+				EnableWindow(edt2, FALSE);
+				EnableWindow(st, FALSE);
+				EnableWindow(st1, FALSE);
+				EnableWindow(st2, FALSE);
+				EnableWindow(st3, FALSE);
+				EnableWindow(st4, FALSE);
+				EnableWindow(st5, FALSE);
+				EnableWindow(chk2, FALSE);
+				EnableWindow(chk3, FALSE);
+				EnableWindow(chk3, FALSE);
+				EnableWindow(chk4, FALSE);
+				hThread = CreateThread(0, 0, Thread, (LPVOID)hWnd, CREATE_ALWAYS, &idThread);
+			}
 		}
 	}
 	break;

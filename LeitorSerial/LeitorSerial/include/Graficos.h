@@ -18,7 +18,7 @@ private:
 	string GnuFilePath;
 	char* CurrentDirectory;
 	Graficos();
-	bool fileExist(string const&);
+	int fileExist(string const&);
 public:
 	DWORD written;
 	static Graficos& GetInstanceGNUPlot();
@@ -34,13 +34,14 @@ public:
 
 
 };
-inline int Graficos::SetGnuFilePath(string const& pf) {
+inline int Graficos::SetGnuFilePath(string const &pf) {
 	if (pf.empty()) {
 		return -1;
 	}
-	if (!fileExist(pf)) {
+	if (fileExist(pf)==-2) {
 		return -2;
 	}
+
 	GnuFilePath = pf;
 	return 0;
 }
@@ -54,10 +55,16 @@ inline bool Graficos::IsGNUPlotRunning() {
 	return false;
 
 }
-inline bool Graficos::fileExist(string const& path) {
+inline int Graficos::fileExist(string const& path) {
 	if (!fopen_s(&script, path.c_str(), "r")) {		//Success
 		fclose(script);
-		return true;
+		return 1;
+	}
+	switch (errno) {
+	case EACCES:
+		return -1;		//it might exists but it can't be opened
+	case ENOENT:
+		return -2;		//no file found
 	}
 	return false;
 }

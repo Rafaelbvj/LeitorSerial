@@ -9,13 +9,15 @@ Graficos& Graficos::GetInstanceGNUPlot() {
 }
 
 bool Graficos::GNUScript(string const& str) {
-	if(!fileExist(str) || !IsGNUPlotRunning()) {
+	if(fileExist(str)<0 || !IsGNUPlotRunning()) {
 		return false;
 	}
+	
 	op = "load '" + str + "'" + "\n";
 	if (!WriteFile(hWritePipe, op.c_str(), op.size(), &written, 0)) {
 		return false;
 	}
+	
 	return true;
 	
 }
