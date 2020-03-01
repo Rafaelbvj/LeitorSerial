@@ -182,12 +182,12 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 		else {
 			/******************Plot Configuration*********************/
-			
+			fopen_s(&record, "tmpplot", "w");
+			fclose(record);
 			//Setting plot features		
 			graph.GNUScript(scripttoload);
 			/*********************************************************/
-			fopen_s(&record, "tmpplot", "w");
-			fclose(record);
+			
 		}
 	}
 	SetCommMask(commPort, EV_RXCHAR);
@@ -295,7 +295,7 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 			if (LOWORD(wParam) == IDC_SCRIPT) {
 				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
 				ofn.lStructSize = sizeof(ofn);
-				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER;
+				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
 				ofn.nMaxFile = MAX_PATH;
 				ofn.hwndOwner = h;
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
@@ -307,7 +307,7 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 			if (LOWORD(wParam) == IDC_GNUFILE) {
 				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
 				ofn.lStructSize = sizeof(ofn);
-				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER;
+				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
 				ofn.nMaxFile = MAX_PATH;
 				ofn.hwndOwner = h;
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));

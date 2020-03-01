@@ -12,14 +12,7 @@ bool Graficos::GNUScript(string const& str) {
 	if(fileExist(str)<0 || !IsGNUPlotRunning()) {
 		return false;
 	}
-	
-	op = "load '" + str + "'" + "\n";
-	if (!WriteFile(hWritePipe, op.c_str(), op.size(), &written, 0)) {
-		return false;
-	}
-	
-	return true;
-	
+	return CmdLine("load '"+str+"'\n");
 }
 bool Graficos::StartGNUPlotProgram(string const& strcmd) {
 	GnuFilePath.append(strcmd);
