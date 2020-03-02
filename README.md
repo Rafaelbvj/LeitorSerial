@@ -3,6 +3,6 @@ LeitorSerial is a software to read serial commands and data from Arduino Uno SPI
 Compiles for windows x86 or x64 bits.  
 Visual Studio 2019 --- solution version ---.  
 Dependencies:  
-- **libxslxwriter**  
-- **zlib**
-- **gnuplot binary for windows 32 bits**  
+- **libxslxwriter.lib**  
+- **zlib.lib** (and dll required)  
+- **gnuplot binary for windows** 

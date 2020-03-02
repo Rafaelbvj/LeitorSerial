@@ -24,7 +24,7 @@ public:
 	static Graficos& GetInstanceGNUPlot();
 	bool StartGNUPlotProgram();
 	bool StartGNUPlotProgram(string const&);                      //Must be called first   
-	inline int CmdLine(string const&);
+	inline bool CmdLine(string const&);
 	inline int SetGnuFilePath(string const&);
 	inline void FinishGNUPlotProgram();
 	inline bool IsGNUPlotRunning();
@@ -68,15 +68,15 @@ inline int Graficos::fileExist(string const& path) {
 	}
 	return false;
 }
-inline int Graficos::CmdLine(string const& strcmd) {
+inline bool Graficos::CmdLine(string const& strcmd) {
 	if (strcmd.empty()) {
-		return -1;
+		return false;
 	}
 	if (!WriteFile(hWritePipe, strcmd.c_str(), strcmd.size(), &written, 0)) {
-		return -2;
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
 

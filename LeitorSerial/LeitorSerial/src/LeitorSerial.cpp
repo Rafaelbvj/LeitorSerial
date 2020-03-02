@@ -87,10 +87,10 @@ NONCLIENTMETRICS ncm;
 HFONT hFont = (HFONT)NULL, lFont = (HFONT)NULL, sysFont;
 COLORREF textColor;
 HBRUSH hBrush;
-lxw_workbook* LWb;
-lxw_worksheet* LWs;
-lxw_format* LF;
-FILE* record;
+lxw_workbook *LWb = NULL;
+lxw_worksheet *LWs = NULL;
+lxw_format *LF = NULL;
+FILE* record = NULL;
 
 //Common controls
 
@@ -117,7 +117,7 @@ BOOL bRunning;
 //Default configuration DialogOP
 char localfile[100] = { "teste.txt" };
 int baudrate = 9600;
-char pathfile[MAX_PATH];
+
 string scripttoload = "gnuscript-example.gnu"; // Default
 
 DWORD WINAPI Thread(LPVOID lp) {
@@ -182,12 +182,14 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 		else {
 			/******************Plot Configuration*********************/
+			
+			//Setting plot features		
+			if (!graph.GNUScript(scripttoload)) {
+				MessageBox((HWND)lp, L"Não foi possível carregar o script.", L"Aviso", MB_OK | MB_ICONWARNING);
+			}
+			/*********************************************************/
 			fopen_s(&record, "tmpplot", "w");
 			fclose(record);
-			//Setting plot features		
-			graph.GNUScript(scripttoload);
-			/*********************************************************/
-			
 		}
 	}
 	SetCommMask(commPort, EV_RXCHAR);
@@ -413,20 +415,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (wParam == ID_ARQUIVO_SALVAR) {
 				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
 				ofn.lStructSize = sizeof(OPENFILENAMEA);
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_EXPLORER;
+				ofn.Flags = OFN_PATHMUSTEXIST  | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
 				ofn.hwndOwner = hWnd;
 				ofn.nMaxFile = MAX_PATH;
-				ofn.lpstrFile = pathfile;
+				ofn.lpstrFile = (char*)calloc(MAX_PATH,sizeof(char));
 				ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
 				if (GetSaveFileNameA(&ofn)) {
+					int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
 					if (ofn.nFilterIndex == 1) {			//Excel extension selected
 						if (ofn.nFileExtension == 0) {
-							sprintf_s(pathfile, "%s.xlsx", pathfile);
+							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.xlsx", ofn.lpstrFile);
 						}
-						LWb = workbook_new(pathfile);
+						LWb = workbook_new(ofn.lpstrFile);
 						LWs = workbook_add_worksheet(LWb, "Leitor Serial");
 						LF = workbook_add_format(LWb);
-						int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
+						format_set_font_name(LF, "Arial");
 						if (qtLb > 0) {
 							for (long i = 0, c; i < qtLb; i++) {
 								SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
@@ -435,33 +438,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 								worksheet_write_number(LWs, i, 1, c, LF);
 							}
 						}
-
 						workbook_close(LWb);
 					}
 					if (ofn.nFilterIndex == 2) {			//txt extension selected
 						if (ofn.nFileExtension == 0) {
-							sprintf_s(pathfile, "%s.txt", pathfile);
+							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.txt", ofn.lpstrFile);
 						}
-						int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
-						fopen_s(&record, pathfile, "w");
+						fopen_s(&record, ofn.lpstrFile, "w");
 						if (record == NULL) {
 							MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
 							return -1;
 						}
 						if (qtLb > 0) {
 							for (int i = 0; i < qtLb; i++) {
-								SendMessageA(lb, WM_GETTEXT, i, (LPARAM)buffer);
+								SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
 								fprintf(record, "%s\n", buffer);
-
 							}
 						}
 						fclose(record);
 					}
-
-
 				}
-
-
+				free(ofn.lpstrFile);
 			}
 			if (wParam == 1444) {
 				if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
