@@ -1,6 +1,3 @@
-// WindowsProject1.cpp : Define o ponto de entrada para o aplicativo.
-//
-
 #include "framework.h"
 #include "LeitorSerial.h"
 
@@ -9,8 +6,10 @@
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
+
 INT_PTR CALLBACK    DialogOP(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
 	_In_ LPWSTR    lpCmdLine,
@@ -26,7 +25,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	WNDCLASSEXW wcex;
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
-
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WndProc;
 	wcex.cbClsExtra = 0;
@@ -50,8 +48,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, 0, 700, 700, nullptr, nullptr, hInstance, nullptr);
-
-
 
 	ShowWindow(hWnd, nCmdShow);
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWSPROJECT1));
@@ -96,9 +92,9 @@ FILE* record = NULL;
 
 HWND cbPort, cbPrec, cbGanho;					//Combobox's
 HWND edt, edt2;									//Edit
-HWND rd, rd2, rd3, lb, chk1, chk2, chk3, chk4;	//Buttons
+HWND rd, rd2, rd3, chk1, chk2, chk3, chk4;		//Buttons
 HWND st, st1, st2, st3, st4, st5;				//Statics
-
+HWND lv;										//ListView
 //Plot vars
 auto& graph = Graficos::GetInstanceGNUPlot();
 
@@ -106,7 +102,7 @@ auto& graph = Graficos::GetInstanceGNUPlot();
 COMMPORTS cp;
 int nCursel;
 DWORD idThread, readBytes, writeBytes, evt;
-WCHAR  wbuffer[50], selectedPort[50];
+WCHAR  wbuffer[50],wbufferOP[50], selectedPort[50];
 char buffer[50];
 HANDLE hThread, commPort;
 OVERLAPPED olr, olw;
@@ -114,11 +110,10 @@ DataConf dc;
 DataProtocol dp;
 BOOL bRunning;
 
-//Default configuration DialogOP
+//Default set
 char localfile[100] = { "teste.txt" };
 int baudrate = 9600;
-
-string scripttoload = "gnuscript-example.gnu"; // Default
+string scripttoload = "gnuscript-example.gnu"; 
 
 DWORD WINAPI Thread(LPVOID lp) {
 	bRunning = TRUE;
@@ -138,19 +133,19 @@ DWORD WINAPI Thread(LPVOID lp) {
 	cp.dcb.ByteSize = 8;
 
 
-	SendMessage(edt, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
+	SendMessage(edt, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
 	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		dc.prec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
 	}
 	dc.ganho = SendMessage(cbGanho, CB_GETCURSEL, 0, 0) + 1;
-	SendMessage(edt2, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
-	int u = dc.segs = wcstol(wbuffer, 0, 10);
+	SendMessage(edt2, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
+	dc.msegs = wcstol(wbufferOP, 0, 10)*1000; //Spare processing time on arduino
 	if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		memcpy(dc.localfile, localfile, strlen(localfile));
 	}
-	if (dc.segs == 0) {
+	if (dc.msegs == 0) {
 		MessageBox((HWND)lp, L"Tempo de amostragem não definido ou invalido, por padrao a duraçao é de 60 segundos", L"Info", MB_OK | MB_ICONINFORMATION);
-		dc.segs = 60;
+		dc.msegs = 60000;
 	}
 
 	SetCommState(commPort, &cp.dcb);
@@ -158,11 +153,13 @@ DWORD WINAPI Thread(LPVOID lp) {
 		if (GetLastError() == ERROR_IO_PENDING) {
 			if (GetOverlappedResult(commPort, &olw, &writeBytes, TRUE) == FALSE) {
 				sprintf_s(buffer, "Erro GetOverlappedResult:%d", GetLastError());
+				MessageBoxA(0, buffer, "Erro", MB_ICONERROR | MB_OK);
+				return -2;
 			}
 		}
 		else {
 			sprintf_s(buffer, "Erro WriteFile:%d", GetLastError());
-			MessageBoxA(0, buffer, 0, MB_ICONERROR | MB_OK);
+			MessageBoxA(0, buffer, "Erro", MB_ICONERROR | MB_OK);
 			return -2;
 		}
 	}
@@ -194,14 +191,18 @@ DWORD WINAPI Thread(LPVOID lp) {
 	}
 	SetCommMask(commPort, EV_RXCHAR);
 	clock_t begin = clock(), end = 0;
+	long timelimit = dc.msegs / 1000;
 	DWORD e = 0;
-	for (DWORD status = 0, i = 0; (end - begin) / CLOCKS_PER_SEC < dc.segs;) {
+	LVITEM lvi;
+	
+
+	for (DWORD status = 0, i = 0; (end - begin) / CLOCKS_PER_SEC < timelimit;) {
 		end = clock();
 		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Verify serial port events
 			if (GetLastError() == ERROR_IO_PENDING) {
 				status = WaitForSingleObject(olr.hEvent, 5000);		//Waits until 5 seconds
 				if (status == WAIT_TIMEOUT) {
-					MessageBox((HWND)lp, L"Conexao expirou durante a leitura!", L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox((HWND)lp, L"Conexao expirou!", L"Erro", MB_OK | MB_ICONERROR);
 					if (graph.IsGNUPlotRunning()) {
 						graph.FinishGNUPlotProgram();
 					}
@@ -227,37 +228,54 @@ DWORD WINAPI Thread(LPVOID lp) {
 		if (evt & EV_RXCHAR) {
 
 			if (!ReadFile(commPort, &dp, sizeof(dp), 0, &olr)) {
-				GetOverlappedResult(commPort, &olr, &readBytes, TRUE);
+				GetOverlappedResult(commPort, &olr, &readBytes, FALSE);
+				status = WaitForSingleObject(olr.hEvent, 3000);		//Waits until 3 seconds
+				if (status == WAIT_TIMEOUT) {
+					MessageBox((HWND)lp, L"Conexao expirou durante leitura. Pode ser que o arduino tenha terminado inesperadamente.", L"Erro", MB_OK | MB_ICONERROR);
+					break;
+				}
 			}
-			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	  
-
+			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	 //Data signature
 				wsprintf(wbuffer, L"%d", dp.dt);
+
 				/******Update plot file********/
 				if (PlotEnable) {
 					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file on sharing mode
 					if (record != NULL) {
 
-						fprintf(record, "%d %d\n", e, dp.dt);
+						fprintf(record, "%d %d\n", dp.mtime, dp.dt);
 						if (!fclose(record)) {
 							if (e == 0) {
-								graph.CmdLine("plot \"tmpplot\" every 2 with lines lt rgb 'red' title 'linha' \n");
+								graph.CmdLine("plot \"tmpplot\" every 4 with lines lt rgb 'red' title 'linha' \n");
 							}
 							i++;		//plot offset
-							e++;		//index order
-							//Update plot chart
+							e++;		//index order						
 							if (i == 10) {
-								graph.CmdLine("replot\n");
+								graph.CmdLine("replot\n");//Update plot chart
 								i = 0;
 							}
 						}
 					}
-
 				}
 				/*******************************/
-				SendMessage(lb, LB_ADDSTRING, 0, (LPARAM)wbuffer);
-				ZeroMemory(buffer, 50);
+
+				//Add 'Sinal' column a new text
+				//ZeroMemory(&lvi, sizeof(LVITEM));
+				//lvi.mask = LVIF_TEXT;
+				//wsprintf(wbufferOP, L"%d", dp.dt);
+				//lvi.pszText = wbufferOP;
+				//lvi.iItem = e;
+				//lvi.cchTextMax = wcslen(wbufferOP);
+				//ListView_InsertItem(lv, &lvi);
+				////Add 'Tempo' column a new text
+				//wsprintf(wbufferOP, L"%u", dp.mtime);
+				////ListView_SetItemText(lv, e, 1, wbufferOP);
+				//ZeroMemory(&dp, sizeof(DataProtocol));
 			}
 			else {
+				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') {		//End of communication
+					break;
+				}
 				MessageBox((HWND)lp, L"Erro de sincronização, tente novamente.", L"Error", MB_OK | MB_ICONERROR);
 				if (graph.IsGNUPlotRunning()) {
 					graph.FinishGNUPlotProgram();
@@ -335,7 +353,7 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 }
 
 
-void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
+void ComponentG(HWND h,  HINSTANCE hi)
 {
 
 	rect.bottom = 100;
@@ -345,7 +363,6 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	cbPort = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_CHILD, 10, 10, 150, 100, h, 0, hi, 0);
 	rd = CreateWindowEx(0, WC_BUTTON, L"Conectar", WS_VISIBLE | WS_CHILD, 10, 50, 100, 25, h, (HMENU)1404, hi, 0);
 	rd2 = CreateWindowEx(0, WC_BUTTON, L"Iniciar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 10, 520, 100, 25, h, (HMENU)1405, hi, 0);
-	lb = CreateWindowEx(0, WC_LISTBOX, 0, WS_VISIBLE | WS_CHILD | LBS_STANDARD | LBS_HASSTRINGS | LBS_NOTIFY, 300, 110, 300, 500, h, 0, hi, 0);
 	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 300, h, (HMENU)1407, hi, 0);
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
@@ -358,8 +375,23 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	rd3 = CreateWindowEx(0, WC_BUTTON, L"Desconectar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 130, 520, 100, 25, h, (HMENU)1406, hi, 0);
 	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 280, 80, 20, h, 0, hi, 0);
 	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 300, 150, 100, h, 0, hi, 0);
+	lv = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEWW, 0, WS_VISIBLE | LVS_REPORT |WS_CHILD , 300, 110, 300, 500, h,(HMENU)2090, hi, 0);
+	LVCOLUMN lc;
+	WCHAR lvsinal[] = L"Sinal" ;
+	WCHAR lvtempo[] = L"Tempo (milisegundos)";
+	ZeroMemory(&lc, sizeof(LVCOLUMN));
+	lc.mask =LVCF_TEXT|LVCF_FMT|LVCF_WIDTH;
+	lc.cx = 150;
+	lc.fmt = LVCFMT_CENTER;
+	lc.cchTextMax = sizeof(lvsinal);
+	lc.pszText = lvsinal;
+	ListView_InsertColumn(lv, 0, &lc);
+	lc.pszText = lvtempo;
+	lc.cx = 150;
+	lc.cchTextMax = sizeof(lvtempo);
+	ListView_InsertColumn(lv, 1, &lc);
 
-
+	//ListView_InsertItem(lv, &li);
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"1");
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.1");
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.01");
@@ -389,7 +421,6 @@ void ComponentG(HWND h, UINT m, WPARAM w, LPARAM l, HINSTANCE hi)
 	SendMessage(chk4, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(edt, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(edt2, WM_SETFONT, (WPARAM)sysFont, 0);
-	SendMessage(lb, WM_SETFONT, (WPARAM)sysFont, 0);
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -398,7 +429,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
-		ComponentG(hWnd, message, wParam, lParam, hInst);
+		ComponentG(hWnd,  hInst);
 
 
 	}
@@ -413,51 +444,51 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		if (HIWORD(wParam) == 0) {
 			if (wParam == ID_ARQUIVO_SALVAR) {
-				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
-				ofn.lStructSize = sizeof(OPENFILENAMEA);
-				ofn.Flags = OFN_PATHMUSTEXIST  | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
-				ofn.hwndOwner = hWnd;
-				ofn.nMaxFile = MAX_PATH;
-				ofn.lpstrFile = (char*)calloc(MAX_PATH,sizeof(char));
-				ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
-				if (GetSaveFileNameA(&ofn)) {
-					int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
-					if (ofn.nFilterIndex == 1) {			//Excel extension selected
-						if (ofn.nFileExtension == 0) {
-							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.xlsx", ofn.lpstrFile);
-						}
-						LWb = workbook_new(ofn.lpstrFile);
-						LWs = workbook_add_worksheet(LWb, "Leitor Serial");
-						LF = workbook_add_format(LWb);
-						format_set_font_name(LF, "Arial");
-						if (qtLb > 0) {
-							for (long i = 0, c; i < qtLb; i++) {
-								SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
-								c = strtol(buffer, 0, 10);
-								worksheet_write_number(LWs, i, 0, i, LF);
-								worksheet_write_number(LWs, i, 1, c, LF);
-							}
-						}
-						workbook_close(LWb);
-					}
-					if (ofn.nFilterIndex == 2) {			//txt extension selected
-						if (ofn.nFileExtension == 0) {
-							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.txt", ofn.lpstrFile);
-						}
-						fopen_s(&record, ofn.lpstrFile, "w");
-						if (record == NULL) {
-							MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
-							return -1;
-						}
-						if (qtLb > 0) {
-							for (int i = 0; i < qtLb; i++) {
-								SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
-								fprintf(record, "%s\n", buffer);
-							}
-						}
-						fclose(record);
-					}
-				}
+				//ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+				//ofn.lStructSize = sizeof(OPENFILENAMEA);
+				//ofn.Flags = OFN_PATHMUSTEXIST  | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
+				//ofn.hwndOwner = hWnd;
+				//ofn.nMaxFile = MAX_PATH;
+				//ofn.lpstrFile = (char*)calloc(MAX_PATH,sizeof(char));
+				//ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
+				//if (GetSaveFileNameA(&ofn)) {
+				//	int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
+				//	if (ofn.nFilterIndex == 1) {			//Excel extension selected
+				//		if (ofn.nFileExtension == 0) {
+				//			sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.xlsx", ofn.lpstrFile);
+				//		}
+				//		LWb = workbook_new(ofn.lpstrFile);
+				//		LWs = workbook_add_worksheet(LWb, "Leitor Serial");
+				//		LF = workbook_add_format(LWb);
+				//		format_set_font_name(LF, "Arial");
+				//		if (qtLb > 0) {
+				//			for (long i = 0, c; i < qtLb; i++) {
+				//				SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
+				//				c = strtol(buffer, 0, 10);
+				//				worksheet_write_number(LWs, i, 0, i, LF);
+				//				worksheet_write_number(LWs, i, 1, c, LF);
+				//			}
+				//		}
+				//		workbook_close(LWb);
+				//	}
+				//	if (ofn.nFilterIndex == 2) {			//txt extension selected
+				//		if (ofn.nFileExtension == 0) {
+				//			sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.txt", ofn.lpstrFile);
+				//		}
+				//		fopen_s(&record, ofn.lpstrFile, "w");
+				//		if (record == NULL) {
+				//			MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
+				//			return -1;
+				//		}
+				//		if (qtLb > 0) {
+				//			for (int i = 0; i < qtLb; i++) {
+				//				SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
+				//				fprintf(record, "%s\n", buffer);
+				//			}
+				//		}
+				//		fclose(record);
+				//	}
+				//}
 				free(ofn.lpstrFile);
 			}
 			if (wParam == 1444) {
@@ -466,6 +497,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else {
 					SendMessage(chk2, BM_SETCHECK, BST_CHECKED, 0);
+					
 				}
 			}
 			if (wParam == 1445) {
@@ -529,7 +561,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			if (wParam == 1404) {
 
-				SendMessage(lb, LB_RESETCONTENT, 0, 0);
+				//SendMessage(lb, LB_RESETCONTENT, 0, 0);
 				nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
 				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
 				commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);

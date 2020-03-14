@@ -4,15 +4,16 @@
 #include <string>
 using namespace std;
 typedef struct dataconf {
-	int segs;				//Sampling duration
-	int prec;				//Precision
-	int ganho;				//Gain
+	unsigned int msegs;					//Sampling duration
+	unsigned int prec;					//Precision
+	unsigned int ganho;					//Gain
 	char localfile[100];		//SD file local
 } DataConf;
 typedef struct data {
-	unsigned char signbegin[4];
-	int dt;
-	unsigned char signend[4];
+	unsigned char signbegin[4];	//3 bytes for padding memory
+	int dt;						//Digital signal from H7X11
+	unsigned int mtime;			//Time for each step on arduino's loop		
+	unsigned char signend[4];	//3 bytes for padding memory
 }DataProtocol;
 typedef struct commports{
 	vector <string> cm;

@@ -1,12 +1,10 @@
 #include <SD.h>
 #define PD_SCK 2
 #define DOUT 3
-#define PULSOS 24
-const float PRECISAO = 8388607.0f; // 2^(24-1) numeros negativos possiveis ou 2^(24-1) - 1 numeros positivos possíveis
-byte data[3];
+
 long int resultado;
 typedef struct dataconf {
-  unsigned long int segs;
+  unsigned long int msegs;
   unsigned long int prec;
   unsigned long int ganho;
   char localfile[100];
@@ -14,73 +12,127 @@ typedef struct dataconf {
 typedef struct data {
   unsigned char signbegin[4];
   long int dt;
+  unsigned long mtime;
   unsigned char signend[4];
 } DataProtocol;
+
+
+/**********ADCHX611 class**************/
+
+#define GANHO_20MV 1
+#define GANHO_80MV 2    //CHANNEL B
+#define GANHO_40MV 3
+
+class ADCHX711 {
+  private:
+    byte data[3],kp;
+    int pd_sck_hx;
+    int dout_hx;
+  public:
+    ADCHX711() {
+      pd_sck_hx = 1;
+      pd_sck_hx = 2;
+    }
+    ADCHX711(int pd_sck, int dout) {
+      SetUpPin(pd_sck, dout);
+    }
+    void SetUpPin(int pd_sck, int dout) {
+      pd_sck_hx = pd_sck;
+      dout_hx = dout;
+      pinMode(dout, INPUT_PULLUP);
+      pinMode(pd_sck, OUTPUT);
+    }
+    void TurnOn() {                                               //Ativa o HX711
+      digitalWrite(pd_sck_hx, LOW);
+    }
+    void TurnOff() {                                              //Desliga o HX711
+      digitalWrite(pd_sck_hx, HIGH);
+    }
+    bool GetSignalNumber(int ganho, long int *res) {              //Verifica se há dados pronto para leitura e os lê em signed para res
+      if (digitalRead(dout_hx) == LOW) {
+        for (int i = 0; i < 3; i++) {
+          data[i] = shiftIn(dout_hx, pd_sck_hx, MSBFIRST);
+        }
+        for (int i = 0; i < ganho; i++) {
+          digitalWrite(pd_sck_hx, HIGH);
+          delayMicroseconds(1);
+          digitalWrite(pd_sck_hx, LOW);
+          delayMicroseconds(1);
+        }
+        if (digitalRead(dout_hx) == HIGH) {
+          kp = data[0];                                             //Salva o byte mais significativo dos dados
+          if (kp >> 7 == 1) {                                       //Verifica se o sinal e negativo comparando o MSB == 1
+            *res = (uint32_t)0xFF << 24;                            //Se for negativo o byte mais significativo do resultado e preenchido por 1's em binario (ver complemento para 2)
+          }
+          *res |= (uint32_t)data[0] << 16 | (uint32_t)data[1] << 8 | (uint32_t)data[2]; 
+          return true;         
+        }
+        
+      }
+      return false;
+    }
+
+};
+/*****************************************************/
+
+bool SDIsOk = false;
+ADCHX711 adc;
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(9600);
-  pinMode(DOUT, INPUT_PULLUP);
-  pinMode(PD_SCK, OUTPUT);
-  digitalWrite(PD_SCK, LOW);
+  adc.SetUpPin(PD_SCK, DOUT);
+  adc.TurnOn();
+  //if (SD.begin()) {
+  //    SDIsOk = true;
+  // }
 
 }
 
-float milivolts;
+File file;
 DataConf dc;
 char br[120];
-byte dts[12];
 int i = 0 ;
+bool WriteSD = false;
+unsigned long clock_st, clock_end;
+DataProtocol dp;
 
 void loop() {
-  // put your main code here, to run repeatedly:
   if (Serial.available() > 0) {
-
     br[i] = Serial.read();
     i++;
     if (i == sizeof(DataConf)) {
-
-      memset(&dc, 0, sizeof(dc));
       memcpy(&dc, br, sizeof(DataConf));
-      Serial.flush();
-      for (DataProtocol dp;;) {
-
-        if (digitalRead(DOUT) == LOW) {
-          for (i = 0; i < 3; i++) {
-            data[i] = shiftIn(DOUT, PD_SCK, MSBFIRST);
-          }
-          for (i = 0; i < dc.ganho; i++) {
-            digitalWrite(PD_SCK, HIGH);
-            delayMicroseconds(1);
-            digitalWrite(PD_SCK, LOW);
-            delayMicroseconds(1);
-          }
-
-          if (digitalRead(DOUT) == HIGH) {
-            byte kp = data[0];                  //Salva o byte mais significativo dos dados
-            if (kp >> 7 == 1) {                 //Verifica se o sinal e negativo comparando o MSB == 1
-              resultado = (uint32_t)0xFF << 24; //Se for negativo o byte mais significativo do resultado e preenchido por 1's em binario (ver complemento para 2)
-            }
-
-            resultado |= (uint32_t)data[0] << 16 | (uint32_t)data[1] << 8 | (uint32_t)data[2];
-            /********Test code********/
-            /*
-            milivolts = 20 * (resultado / PRECISAO);        //em milivolts 20mV ==> Ganho 1, 40mV ==> Ganho 3, 80mB ==> Ganho 2 (Inn B)
-            Serial.print(resultado);
-            Serial.print(" ");
-            Serial.println(milivolts);*/
-            /*************************/
-            dp.signbegin[0] = 'B';
-            dp.dt = resultado;
-            dp.signend[0] = 'E';
-            memset(&dts, 0, sizeof(dts));
-            memcpy(&dts, &dp, sizeof(dp));
-            Serial.write(dts, sizeof(dts));
-          }
-          resultado = 0;
-        }
-        i = 0;
+      if (dc.localfile[0] != '\0' && SDIsOk) {
+        file = SD.open(dc.localfile, FILE_WRITE);
+        WriteSD = true;
       }
-
+      i = 0;
+      dp.signbegin[0] = 'B';        //Data signature
+      dp.signend[0] = 'E';          //Data signature
+      clock_st = millis();
+      while (clock_end < dc.msegs) {
+        clock_end = millis();
+        if (adc.GetSignalNumber(dc.ganho, &resultado)) {
+          
+          if (WriteSD) {
+            file.print(i);
+            file.print(" ");
+            file.println(resultado);
+            i++;
+            continue;                             //Test whether its performance is okay or not
+          }
+          dp.mtime = clock_end-clock_st;
+          dp.dt = resultado;
+          Serial.write((byte*)&dp, sizeof(DataProtocol));
+        }
+      }
+      dp.signbegin[0] = 'E';                         
+      dp.signend[0] = 'D';
+      Serial.write((byte*)&dp,sizeof(DataProtocol));//Finishing communication
+      
+      if (WriteSD) {
+        file.close();
+      }
     }
+    
   }
 }
