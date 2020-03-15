@@ -48,7 +48,7 @@ class ADCHX711 {
     void TurnOff() {                                              //Desliga o HX711
       digitalWrite(pd_sck_hx, HIGH);
     }
-    bool GetSignalNumber(int ganho, long int *res) {              //Verifica se há dados pronto para leitura e os lê em signed para res
+    bool GetSignalNumber(int ganho, long int &res) {              //Verifica se há dados pronto para leitura e os lê em signed para res
       if (digitalRead(dout_hx) == LOW) {
         for (int i = 0; i < 3; i++) {
           data[i] = shiftIn(dout_hx, pd_sck_hx, MSBFIRST);
@@ -62,9 +62,9 @@ class ADCHX711 {
         if (digitalRead(dout_hx) == HIGH) {
           kp = data[0];                                             //Salva o byte mais significativo dos dados
           if (kp >> 7 == 1) {                                       //Verifica se o sinal e negativo comparando o MSB == 1
-            *res = (uint32_t)0xFF << 24;                            //Se for negativo o byte mais significativo do resultado e preenchido por 1's em binario (ver complemento para 2)
+            res = (uint32_t)0xFF << 24;                            //Se for negativo o byte mais significativo do resultado e preenchido por 1's em binario (ver complemento para 2)
           }
-          *res |= (uint32_t)data[0] << 16 | (uint32_t)data[1] << 8 | (uint32_t)data[2]; 
+          res |= (uint32_t)data[0] << 16 | (uint32_t)data[1] << 8 | (uint32_t)data[2]; 
           return true;         
         }
         
@@ -111,7 +111,7 @@ void loop() {
       clock_st = millis();
       while (clock_end < dc.msegs) {
         clock_end = millis();
-        if (adc.GetSignalNumber(dc.ganho, &resultado)) {
+        if (adc.GetSignalNumber(dc.ganho, resultado)) {
           
           if (WriteSD) {
             file.print(i);

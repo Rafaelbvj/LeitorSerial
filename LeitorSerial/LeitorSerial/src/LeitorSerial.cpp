@@ -237,7 +237,6 @@ DWORD WINAPI Thread(LPVOID lp) {
 			}
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	 //Data signature
 				wsprintf(wbuffer, L"%d", dp.dt);
-
 				/******Update plot file********/
 				if (PlotEnable) {
 					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file on sharing mode
@@ -260,17 +259,15 @@ DWORD WINAPI Thread(LPVOID lp) {
 				/*******************************/
 
 				//Add 'Sinal' column a new text
-				//ZeroMemory(&lvi, sizeof(LVITEM));
-				//lvi.mask = LVIF_TEXT;
-				//wsprintf(wbufferOP, L"%d", dp.dt);
-				//lvi.pszText = wbufferOP;
-				//lvi.iItem = e;
-				//lvi.cchTextMax = wcslen(wbufferOP);
-				//ListView_InsertItem(lv, &lvi);
-				////Add 'Tempo' column a new text
-				//wsprintf(wbufferOP, L"%u", dp.mtime);
-				////ListView_SetItemText(lv, e, 1, wbufferOP);
-				//ZeroMemory(&dp, sizeof(DataProtocol));
+				ZeroMemory(&lvi, sizeof(LVITEM));
+				lvi.mask = LVIF_TEXT;
+				lvi.pszText = wbuffer;
+				lvi.iItem = e;
+				lvi.cchTextMax = wcslen(wbuffer);
+				ListView_InsertItem(lv, &lvi);
+				//Add 'Tempo' column a new text
+				wsprintf(wbufferOP, L"%u", dp.mtime);
+				ListView_SetItemText(lv, e, 1, wbufferOP);
 			}
 			else {
 				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') {		//End of communication
@@ -444,51 +441,72 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		if (HIWORD(wParam) == 0) {
 			if (wParam == ID_ARQUIVO_SALVAR) {
-				//ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
-				//ofn.lStructSize = sizeof(OPENFILENAMEA);
-				//ofn.Flags = OFN_PATHMUSTEXIST  | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
-				//ofn.hwndOwner = hWnd;
-				//ofn.nMaxFile = MAX_PATH;
-				//ofn.lpstrFile = (char*)calloc(MAX_PATH,sizeof(char));
-				//ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
-				//if (GetSaveFileNameA(&ofn)) {
-				//	int qtLb = SendMessage(lb, LB_GETCOUNT, 0, 0);
-				//	if (ofn.nFilterIndex == 1) {			//Excel extension selected
-				//		if (ofn.nFileExtension == 0) {
-				//			sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.xlsx", ofn.lpstrFile);
-				//		}
-				//		LWb = workbook_new(ofn.lpstrFile);
-				//		LWs = workbook_add_worksheet(LWb, "Leitor Serial");
-				//		LF = workbook_add_format(LWb);
-				//		format_set_font_name(LF, "Arial");
-				//		if (qtLb > 0) {
-				//			for (long i = 0, c; i < qtLb; i++) {
-				//				SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
-				//				c = strtol(buffer, 0, 10);
-				//				worksheet_write_number(LWs, i, 0, i, LF);
-				//				worksheet_write_number(LWs, i, 1, c, LF);
-				//			}
-				//		}
-				//		workbook_close(LWb);
-				//	}
-				//	if (ofn.nFilterIndex == 2) {			//txt extension selected
-				//		if (ofn.nFileExtension == 0) {
-				//			sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.txt", ofn.lpstrFile);
-				//		}
-				//		fopen_s(&record, ofn.lpstrFile, "w");
-				//		if (record == NULL) {
-				//			MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
-				//			return -1;
-				//		}
-				//		if (qtLb > 0) {
-				//			for (int i = 0; i < qtLb; i++) {
-				//				SendMessageA(lb, LB_GETTEXT, i, (LPARAM)buffer);
-				//				fprintf(record, "%s\n", buffer);
-				//			}
-				//		}
-				//		fclose(record);
-				//	}
-				//}
+				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+				ofn.lStructSize = sizeof(OPENFILENAMEA);
+				ofn.Flags = OFN_PATHMUSTEXIST  | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
+				ofn.hwndOwner = hWnd;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.lpstrFile = (char*)calloc(MAX_PATH,sizeof(char));
+				ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
+				if (GetSaveFileNameA(&ofn)) {
+					LVITEM lvi;
+					int qtLb = SendMessage(lv, LVM_GETITEMCOUNT, 0, 0);
+					if (ofn.nFilterIndex == 1) {			//Excel extension selected
+						if (ofn.nFileExtension == 0) {
+							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.xlsx", ofn.lpstrFile);
+						}
+						LWb = workbook_new(ofn.lpstrFile);
+						LWs = workbook_add_worksheet(LWb, "Leitor Serial");
+						LF = workbook_add_format(LWb);
+						format_set_font_name(LF, "Arial");
+						if (qtLb > 0) {
+							
+							lvi.mask = LVIF_TEXT;
+							lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
+							lvi.cchTextMax = 100;
+							for (long i = 0, c; i < qtLb; i++) {
+								lvi.iSubItem = 0;
+								lvi.iItem = i;								
+								ListView_GetItem(lv, &lvi);
+								c = wcstol(lvi.pszText, 0, 10);
+								worksheet_write_number(LWs, i, 0, c, LF);
+
+								lvi.iSubItem = 1;
+								ListView_GetItem(lv, &lvi);
+								c = wcstol(lvi.pszText, 0, 10);
+								worksheet_write_number(LWs, i, 1, c, LF);
+							}
+						}
+						workbook_close(LWb);
+					}
+					if (ofn.nFilterIndex == 2) {			//txt extension selected
+						if (ofn.nFileExtension == 0) {
+							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.txt", ofn.lpstrFile);
+						}
+						fopen_s(&record, ofn.lpstrFile, "w");
+						if (record == NULL) {
+							MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
+							return -1;
+						}
+						if (qtLb > 0) {
+							lvi.mask = LVIF_TEXT;
+							lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
+							lvi.cchTextMax = 100;
+							for (long i = 0,c,d; i < qtLb; i++) {
+								lvi.iSubItem = 0;
+								lvi.iItem = i;
+								ListView_GetItem(lv, &lvi);
+								c = wcstol(lvi.pszText, 0, 10);
+
+								lvi.iSubItem = 1;
+								ListView_GetItem(lv, &lvi);
+								d = wcstol(lvi.pszText, 0, 10);
+								fprintf(record, "%d %d\n", d,c);
+							}
+						}
+						fclose(record);
+					}
+				}
 				free(ofn.lpstrFile);
 			}
 			if (wParam == 1444) {

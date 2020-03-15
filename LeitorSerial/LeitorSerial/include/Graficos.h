@@ -75,7 +75,6 @@ inline bool Graficos::CmdLine(string const& strcmd) {
 	if (!WriteFile(hWritePipe, strcmd.c_str(), strcmd.size(), &written, 0)) {
 		return false;
 	}
-
 	return true;
 }
 
