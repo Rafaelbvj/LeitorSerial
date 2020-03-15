@@ -185,8 +185,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				MessageBox((HWND)lp, L"Não foi possível carregar o script.", L"Aviso", MB_OK | MB_ICONWARNING);
 			}
 			/*********************************************************/
-			fopen_s(&record, "tmpplot", "w");
-			fclose(record);
+			fclose(_fsopen("tmpplot","w",SH_DENYNO));
 		}
 	}
 	SetCommMask(commPort, EV_RXCHAR);
@@ -237,6 +236,17 @@ DWORD WINAPI Thread(LPVOID lp) {
 			}
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	 //Data signature
 				wsprintf(wbuffer, L"%d", dp.dt);
+				//Add 'Sinal' column a new text
+				ZeroMemory(&lvi, sizeof(LVITEM));
+				lvi.mask = LVIF_TEXT;
+				lvi.pszText = wbuffer;
+				lvi.iItem = e;
+				lvi.cchTextMax = wcslen(wbuffer);
+				ListView_InsertItem(lv, &lvi);
+				//Add 'Tempo' column a new text
+				wsprintf(wbufferOP, L"%d", dp.mtime);
+				ListView_SetItemText(lv, e, 1, wbufferOP);
+
 				/******Update plot file********/
 				if (PlotEnable) {
 					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file on sharing mode
@@ -244,7 +254,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 						fprintf(record, "%d %d\n", dp.mtime, dp.dt);
 						if (!fclose(record)) {
-							if (e == 0) {
+							if (e == 4) {			//This number must match gnuplot inline command 'every'
 								graph.CmdLine("plot \"tmpplot\" every 4 with lines lt rgb 'red' title 'linha' \n");
 							}
 							i++;		//plot offset
@@ -256,18 +266,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 						}
 					}
 				}
-				/*******************************/
-
-				//Add 'Sinal' column a new text
-				ZeroMemory(&lvi, sizeof(LVITEM));
-				lvi.mask = LVIF_TEXT;
-				lvi.pszText = wbuffer;
-				lvi.iItem = e;
-				lvi.cchTextMax = wcslen(wbuffer);
-				ListView_InsertItem(lv, &lvi);
-				//Add 'Tempo' column a new text
-				wsprintf(wbufferOP, L"%u", dp.mtime);
-				ListView_SetItemText(lv, e, 1, wbufferOP);
+				/*******************************/				
 			}
 			else {
 				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') {		//End of communication
@@ -476,6 +475,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 								c = wcstol(lvi.pszText, 0, 10);
 								worksheet_write_number(LWs, i, 1, c, LF);
 							}
+							free(lvi.pszText);
 						}
 						workbook_close(LWb);
 					}
@@ -503,6 +503,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 								d = wcstol(lvi.pszText, 0, 10);
 								fprintf(record, "%d %d\n", d,c);
 							}
+							free(lvi.pszText);
 						}
 						fclose(record);
 					}
@@ -579,7 +580,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			if (wParam == 1404) {
 
-				//SendMessage(lb, LB_RESETCONTENT, 0, 0);
+				ListView_DeleteAllItems(lv);
 				nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
 				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
 				commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
