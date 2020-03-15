@@ -108,7 +108,7 @@ HANDLE hThread, commPort;
 OVERLAPPED olr, olw;
 DataConf dc;
 DataProtocol dp;
-BOOL bRunning;
+BOOL bRunning,bSaved;
 
 //Default set
 char localfile[100] = { "teste.txt" };
@@ -506,6 +506,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 							free(lvi.pszText);
 						}
 						fclose(record);
+					
+					}
+					if (lParam == 1) {
+						memset(wbuffer, 0, sizeof(wbuffer));
+						ListView_DeleteAllItems(lv);
+						InvalidateRect(hWnd, 0, TRUE);
 					}
 				}
 				free(ofn.lpstrFile);
@@ -579,13 +585,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				EnableWindow(chk4, FALSE);
 			}
 			if (wParam == 1404) {
-
-				ListView_DeleteAllItems(lv);
+				if (ListView_GetItemCount(lv) > 0) {
+					if (MessageBox(hWnd, L"Os dados da tabela serão apagados, deseja salvá-los?", L"Info", MB_YESNO | MB_ICONINFORMATION) == IDNO) {
+						memset(wbuffer, 0, sizeof(wbuffer));
+						ListView_DeleteAllItems(lv);
+						InvalidateRect(hWnd, 0, TRUE);
+					}
+					else {						
+						SendMessage(hWnd, WM_COMMAND, ID_ARQUIVO_SALVAR, (LPARAM)1);
+						break;
+					}
+					
+				}
 				nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
 				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
 				commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 				if (commPort == INVALID_HANDLE_VALUE) {
-					MessageBox(0, L"Erro ao conectar a porta", L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox(0, L"Erro ao conectar a porta serial.", L"Erro", MB_OK | MB_ICONERROR);
 
 				}
 				else {
