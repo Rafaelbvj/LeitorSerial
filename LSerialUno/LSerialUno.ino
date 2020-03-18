@@ -1,6 +1,7 @@
 #include <SD.h>
 #define PD_SCK 2
 #define DOUT 3
+#define SERIAL_BAUDRATE 9600
 
 long int resultado;
 typedef struct dataconf {
@@ -75,35 +76,33 @@ class ADCHX711 {
 };
 /*****************************************************/
 
-bool SDIsOk = false;
 ADCHX711 adc;
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(SERIAL_BAUDRATE);
   adc.SetUpPin(PD_SCK, DOUT);
   adc.TurnOn();
-  //if (SD.begin()) {
-  //    SDIsOk = true;
-  // }
-
 }
 
 File file;
 DataConf dc;
+DataProtocol dp;
 char br[120];
 int i = 0 ;
 bool WriteSD = false;
 unsigned long clock_st, clock_end;
-DataProtocol dp;
 
 void loop() {
+  
   if (Serial.available() > 0) {
     br[i] = Serial.read();
     i++;
     if (i == sizeof(DataConf)) {
       memcpy(&dc, br, sizeof(DataConf));
-      if (dc.localfile[0] != '\0' && SDIsOk) {
+      if (dc.localfile[0] != '\0' ) {                 //no file location
+        if (SD.begin()) {
         file = SD.open(dc.localfile, FILE_WRITE);
         WriteSD = true;
+        }
       }
       i = 0;
       dp.signbegin[0] = 'B';        //Data signature
@@ -112,7 +111,6 @@ void loop() {
       while (clock_end < dc.msegs) {
         clock_end = millis();
         if (adc.GetSignalNumber(dc.ganho, resultado)) {
-          
           if (WriteSD) {
             file.print(i);
             file.print(" ");

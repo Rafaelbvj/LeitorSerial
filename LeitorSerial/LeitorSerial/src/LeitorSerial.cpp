@@ -102,13 +102,13 @@ auto& graph = Graficos::GetInstanceGNUPlot();
 COMMPORTS cp;
 int nCursel;
 DWORD idThread, readBytes, writeBytes, evt;
-WCHAR  wbuffer[50],wbufferOP[50], selectedPort[50];
+WCHAR  wbuffer[50],wbufferOP[50], selectedPort[20];
 char buffer[50];
 HANDLE hThread, commPort;
 OVERLAPPED olr, olw;
 DataConf dc;
 DataProtocol dp;
-BOOL bRunning,bSaved;
+BOOL bRunning;
 
 //Default set
 char localfile[100] = { "teste.txt" };
@@ -359,7 +359,7 @@ void ComponentG(HWND h,  HINSTANCE hi)
 	cbPort = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_CHILD, 10, 10, 150, 100, h, 0, hi, 0);
 	rd = CreateWindowEx(0, WC_BUTTON, L"Conectar", WS_VISIBLE | WS_CHILD, 10, 50, 100, 25, h, (HMENU)1404, hi, 0);
 	rd2 = CreateWindowEx(0, WC_BUTTON, L"Iniciar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 10, 520, 100, 25, h, (HMENU)1405, hi, 0);
-	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 300, h, (HMENU)1407, hi, 0);
+	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 250, h, (HMENU)1407, hi, 0);
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
 	chk4 = CreateWindowEx(0, WC_BUTTON, L"Tensão", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 70, 20, h, (HMENU)1478, hi, 0);
@@ -372,6 +372,7 @@ void ComponentG(HWND h,  HINSTANCE hi)
 	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 280, 80, 20, h, 0, hi, 0);
 	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 300, 150, 100, h, 0, hi, 0);
 	lv = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEWW, 0, WS_VISIBLE | LVS_REPORT |WS_CHILD , 300, 110, 300, 500, h,(HMENU)2090, hi, 0);
+	ListView_SetExtendedListViewStyle(lv, LVS_EX_FULLROWSELECT); 
 	LVCOLUMN lc;
 	WCHAR lvsinal[] = L"Sinal" ;
 	WCHAR lvtempo[] = L"Tempo (milisegundos)";
@@ -435,7 +436,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		if (HIWORD(wParam) == CBN_DROPDOWN) {
 			if (IsWindowEnabled(cbPort)) {
-				AddPortsNametoCB(&cp, cbPort);
+				AddPortsNametoCB(cp, cbPort);
 			}
 		}
 		if (HIWORD(wParam) == 0) {

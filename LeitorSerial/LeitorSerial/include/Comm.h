@@ -7,7 +7,7 @@ typedef struct dataconf {
 	unsigned int msegs;					//Sampling duration
 	unsigned int prec;					//Precision
 	unsigned int ganho;					//Gain
-	char localfile[100];		//SD file local
+	char localfile[100];				//SD file local
 } DataConf;
 typedef struct data {
 	unsigned char signbegin[4];	//3 bytes for padding memory
@@ -16,10 +16,9 @@ typedef struct data {
 	unsigned char signend[4];	//3 bytes for padding memory
 }DataProtocol;
 typedef struct commports{
-	vector <string> cm;
+	vector <wstring> cm;
 	int nCursel{ 0 };
-	string portConnected;
 	DCB dcb{ 0 };
 	COMMTIMEOUTS ct{ 0 };
 }COMMPORTS;
-int AddPortsNametoCB(COMMPORTS *,HWND);
+int AddPortsNametoCB(COMMPORTS&,HWND);
