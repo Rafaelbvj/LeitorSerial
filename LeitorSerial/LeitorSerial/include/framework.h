@@ -8,6 +8,7 @@
 #define WIN32_LEAN_AND_MEAN             // Excluir itens raramente utilizados dos cabeçalhos do Windows
 #include "Comm.h"
 #include "Graficos.h"
+#include "ErrorList.h"
 #include <xlsxwriter.h>
 
 // Arquivos de Cabeçalho do Windows

@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Comm.h" />
+    <ClInclude Include="include\ErrorList.h" />
     <ClInclude Include="include\framework.h" />
     <ClInclude Include="include\Graficos.h" />
     <ClInclude Include="include\LeitorSerial.h" />
