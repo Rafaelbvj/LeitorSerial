@@ -124,7 +124,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	olr.hEvent = CreateEvent(0, TRUE, FALSE, L"Read");
 	olw.hEvent = CreateEvent(0, TRUE, FALSE, L"Write");
 	if (olr.hEvent == NULL || olw.hEvent == NULL) {
-		MessageBoxA((HWND)lp, "Erro CreateEVent", 0, MB_OK | MB_ICONERROR);
+		MessageBox((HWND)lp, ErrorCreateEvent, 0, MB_OK | MB_ICONERROR);
 		return -1;
 	}
 	cp.dcb.BaudRate = baudrate;
@@ -144,7 +144,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 		memcpy(dc.localfile, localfile, strlen(localfile));
 	}
 	if (dc.msegs == 0) {
-		MessageBox((HWND)lp, L"Tempo de amostragem não definido ou invalido, por padrao a duraçao é de 60 segundos", L"Info", MB_OK | MB_ICONINFORMATION);
+		MessageBox((HWND)lp, InfoTimeLimit, L"Info", MB_OK | MB_ICONINFORMATION);
 		dc.msegs = 60000;
 	}
 
@@ -152,14 +152,13 @@ DWORD WINAPI Thread(LPVOID lp) {
 	if (WriteFile(commPort, &dc, sizeof(dc), &writeBytes, &olw) == FALSE) {
 		if (GetLastError() == ERROR_IO_PENDING) {
 			if (GetOverlappedResult(commPort, &olw, &writeBytes, TRUE) == FALSE) {
-				sprintf_s(buffer, "Erro GetOverlappedResult:%d", GetLastError());
-				MessageBoxA(0, buffer, "Erro", MB_ICONERROR | MB_OK);
+				
+				MessageBox(0,ErrorGetOverlappedResult, L"Erro", MB_ICONERROR | MB_OK);
 				return -2;
 			}
 		}
-		else {
-			sprintf_s(buffer, "Erro WriteFile:%d", GetLastError());
-			MessageBoxA(0, buffer, "Erro", MB_ICONERROR | MB_OK);
+		else {			
+			MessageBox(0, ErrorWriteFile, L"Erro", MB_ICONERROR | MB_OK);
 			return -2;
 		}
 	}
@@ -170,11 +169,11 @@ DWORD WINAPI Thread(LPVOID lp) {
 	if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		PlotEnable = TRUE;
 		if (graph.IsGNUPlotRunning()) {
-			MessageBox((HWND)lp, L"A ultima instância do GNUPlot sera fechada.", L"Aviso", MB_OK | MB_ICONWARNING);
+			MessageBox((HWND)lp, WarningGnuRunning, L"Aviso", MB_OK | MB_ICONWARNING);
 			graph.FinishGNUPlotProgram();
 		}
 		if (!graph.StartGNUPlotProgram()) {
-			MessageBox((HWND)lp, L"Erro ao iniciar GNUPlot. Verifique o caminho do executável ou se o programa foi instalado", L"Erro", MB_OK | MB_ICONERROR);
+			MessageBox((HWND)lp, ErrorGnuPlotNotFound, L"Erro", MB_OK | MB_ICONERROR);
 			PlotEnable = FALSE;
 		}
 		else {
@@ -182,7 +181,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 			
 			//Setting plot features		
 			if (!graph.GNUScript(scripttoload)) {
-				MessageBox((HWND)lp, L"Não foi possível carregar o script.", L"Aviso", MB_OK | MB_ICONWARNING);
+				MessageBox((HWND)lp, WarningScriptNotLoad, L"Aviso", MB_OK | MB_ICONWARNING);
 			}
 			/*********************************************************/
 			fclose(_fsopen("tmpplot","w",SH_DENYNO));
@@ -201,7 +200,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 			if (GetLastError() == ERROR_IO_PENDING) {
 				status = WaitForSingleObject(olr.hEvent, 5000);		//Waits until 5 seconds
 				if (status == WAIT_TIMEOUT) {
-					MessageBox((HWND)lp, L"Conexao expirou!", L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox((HWND)lp, ErrorTimeOut, L"Erro", MB_OK | MB_ICONERROR);
 					if (graph.IsGNUPlotRunning()) {
 						graph.FinishGNUPlotProgram();
 					}
@@ -209,15 +208,14 @@ DWORD WINAPI Thread(LPVOID lp) {
 				}
 				if (status == WAIT_FAILED) {
 
-					sprintf_s(buffer, "Erro WaitForSingleObject:%d", GetLastError());
-					MessageBoxA(0, buffer, "Erro", MB_ICONERROR);
+					MessageBox((HWND)lp, ErrorWaitForSingleObject, L"Erro", MB_ICONERROR);
 					break;
 				}
 
 			}
 			else {
-				sprintf_s(buffer, "Erro WaitCommEvent:%d", GetLastError());
-				MessageBoxA(0, buffer, "Erro", MB_ICONERROR);
+				
+				MessageBox((HWND)lp,ErrorWaitCommEvent, L"Erro", MB_ICONERROR);
 				COMSTAT cs;
 				ClearCommError(commPort, &readBytes, &cs);
 				break;
@@ -230,7 +228,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				GetOverlappedResult(commPort, &olr, &readBytes, FALSE);
 				status = WaitForSingleObject(olr.hEvent, 3000);		//Waits until 3 seconds
 				if (status == WAIT_TIMEOUT) {
-					MessageBox((HWND)lp, L"Conexao expirou durante leitura. Pode ser que o arduino tenha terminado inesperadamente.", L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox((HWND)lp, ErrorReadFileTimeOut, L"Erro", MB_OK | MB_ICONERROR);
 					break;
 				}
 			}
@@ -272,7 +270,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') {		//End of communication
 					break;
 				}
-				MessageBox((HWND)lp, L"Erro de sincronização, tente novamente.", L"Error", MB_OK | MB_ICONERROR);
+				MessageBox((HWND)lp, ErrorSync, L"Erro", MB_OK | MB_ICONERROR);
 				if (graph.IsGNUPlotRunning()) {
 					graph.FinishGNUPlotProgram();
 				}
@@ -689,7 +687,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CLOSE:
 	{
 		if (bRunning) {
-			if (MessageBox(hWnd, L"O programa está em execução. Tem certeza que deseja sair?", L"Aviso", MB_YESNO | MB_ICONEXCLAMATION) == IDNO) {
+			if (MessageBox(hWnd, WarningProgramExit, L"Aviso", MB_YESNO | MB_ICONEXCLAMATION) == IDNO) {
 				return 0;
 			}
 
