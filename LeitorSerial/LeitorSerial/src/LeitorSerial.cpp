@@ -484,7 +484,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						}
 						fopen_s(&record, ofn.lpstrFile, "w");
 						if (record == NULL) {
-							MessageBox(hWnd, L"Erro ao salvar o arquivo", L"Erro", MB_OK | MB_ICONERROR);
+							MessageBox(hWnd, ErrorFileOpen, L"Erro", MB_OK | MB_ICONERROR);
 							return -1;
 						}
 						if (qtLb > 0) {
@@ -585,7 +585,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			if (wParam == 1404) {
 				if (ListView_GetItemCount(lv) > 0) {
-					if (MessageBox(hWnd, L"Os dados da tabela serão apagados, deseja salvá-los?", L"Info", MB_YESNO | MB_ICONINFORMATION) == IDNO) {
+					if (MessageBox(hWnd, WarningSaveFile, L"Aviso", MB_YESNO | MB_ICONWARNING) == IDNO) {
 						memset(wbuffer, 0, sizeof(wbuffer));
 						ListView_DeleteAllItems(lv);
 						InvalidateRect(hWnd, 0, TRUE);
@@ -600,7 +600,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
 				commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 				if (commPort == INVALID_HANDLE_VALUE) {
-					MessageBox(0, L"Erro ao conectar a porta serial.", L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox(0, ErrorSerialConnection, L"Erro", MB_OK | MB_ICONERROR);
 
 				}
 				else {

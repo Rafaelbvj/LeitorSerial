@@ -13,3 +13,6 @@ WCHAR ErrorWaitCommEvent[] = L"Erro WaitCommEvent";
 WCHAR ErrorSync[] = L"Erro de sincronização, tente novamente.";
 WCHAR WarningProgramExit[] = L"O programa está em execução. Tem certeza que deseja sair?";
 WCHAR ErrorReadFileTimeOut[] = L"Conexao expirou durante leitura. Pode ser que o arduino tenha terminado inesperadamente.";
+WCHAR ErrorFileOpen[] = L"Erro ao salvar o arquivo.";
+WCHAR ErrorSerialConnection[] = L"Erro ao conectar a porta serial.";
+WCHAR WarningSaveFile[] = L"Os dados da tabela serão apagados, deseja salvá-los?";
