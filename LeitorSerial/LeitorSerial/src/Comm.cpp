@@ -9,13 +9,14 @@ int AddPortsNametoCB(COMMPORTS& cm, HWND cb) {
 	SendMessage(cb, CB_RESETCONTENT, 0, 0);
 	for (int i = 0;; i++, sizet = sizeof(bu)) {
 		status = RegEnumValue(key, i, bu2, &sizet, 0, NULL, (LPBYTE)bu, &sizet);
-		if (status != ERROR_NO_MORE_ITEMS && status != ERROR_SUCCESS) {
-			status = -1;
-			break;
-		}
 		if (status == ERROR_NO_MORE_ITEMS) {
 			break;
 		}
+		if (status != ERROR_SUCCESS) {
+			status = -1;
+			break;
+		}
+		
 		SendMessage(cb, CB_ADDSTRING, 0, (LPARAM)bu);
 		vector <wstring>::iterator it = find(cm.cm.begin(), cm.cm.end(),bu);
 		if (it == cm.cm.end()) {
