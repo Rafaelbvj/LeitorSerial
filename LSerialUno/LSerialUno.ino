@@ -98,39 +98,35 @@ void loop() {
     i++;
     if (i == sizeof(DataConf)) {
       memcpy(&dc, br, sizeof(DataConf));
-      if (dc.localfile[0] != '\0' ) {                 //no file location
+      if (dc.localfile[0] != '\0' ) {                 //checks file location
         if (SD.begin()) {
         file = SD.open(dc.localfile, FILE_WRITE);
         WriteSD = true;
         }
       }
-      i = 0;
       dp.signbegin[0] = 'B';        //Data signature
       dp.signend[0] = 'E';          //Data signature
       clock_st = millis();
-      while (clock_end < dc.msegs) {
+      while (dp.mtime < dc.msegs) {
         clock_end = millis();
         if (adc.GetSignalNumber(dc.ganho, resultado)) {
-          if (WriteSD) {
-            file.print(i);
-            file.print(" ");
-            file.println(resultado);
-            i++;
-            continue;                             //Test whether its performance is okay or not
-          }
           dp.mtime = clock_end-clock_st;
           dp.dt = resultado;
+          if (WriteSD) {
+            file.print(dp.mtime);
+            file.print(" ");
+            file.println(dp.dt);
+            continue;                               //Test whether its performance is okay or not
+          }
           Serial.write((byte*)&dp, sizeof(DataProtocol));
         }
       }
       dp.signbegin[0] = 'E';                         
       dp.signend[0] = 'D';
       Serial.write((byte*)&dp,sizeof(DataProtocol));//Finishing communication
-      
       if (WriteSD) {
         file.close();
       }
     }
-    
   }
 }

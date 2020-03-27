@@ -10,10 +10,10 @@ typedef struct dataconf {
 	char localfile[100];				//SD file local
 } DataConf;
 typedef struct data {
-	unsigned char signbegin[4];	//3 bytes for padding memory
-	int dt;						//Digital signal from H7X11
-	unsigned int mtime;			//Time for each step on arduino's loop		
-	unsigned char signend[4];	//3 bytes for padding memory
+	unsigned char signbegin[4];			//3 bytes for padding memory
+	int dt;								//Digital signal from H7X11
+	unsigned int mtime;					//Time for each step on arduino's loop		
+	unsigned char signend[4];			//3 bytes for padding memory
 }DataProtocol;
 typedef struct commports{
 	vector <wstring> cm;

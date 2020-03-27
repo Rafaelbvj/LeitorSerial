@@ -45,9 +45,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		0, 0,
 		LR_DEFAULTCOLOR | LR_DEFAULTSIZE));
 	RegisterClassExW(&wcex);
-
-	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, 0, 700, 700, nullptr, nullptr, hInstance, nullptr);
+	 
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_SYSMENU|WS_MINIMIZEBOX|WS_SIZEBOX,
+		CW_USEDEFAULT, 0, 650, 700, nullptr, nullptr, hInstance, nullptr);
 
 	ShowWindow(hWnd, nCmdShow);
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWSPROJECT1));
@@ -109,9 +109,9 @@ OVERLAPPED olr, olw;
 DataConf dc;
 DataProtocol dp;
 BOOL bRunning;
-
+BOOL tensaoEnabled = FALSE;
 //Default set
-char localfile[100] = { "teste.txt" };
+char localfile[100] = { "teste.lsu" };
 int baudrate = 9600;
 string scripttoload = "gnuscript-example.gnu"; 
 
@@ -137,9 +137,33 @@ DWORD WINAPI Thread(LPVOID lp) {
 	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		dc.prec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
 	}
+ 
 	dc.ganho = SendMessage(cbGanho, CB_GETCURSEL, 0, 0) + 1;
+	int nPrec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
+	WCHAR ptfb[10];
+	char ptff[10];
+	switch (nPrec) {
+	case 0:
+		lstrcpyW(ptfb, L"%.0f");
+		strcpy_s(ptff, "%d %.0f\n");
+		break;
+	case 1:
+		lstrcpyW(ptfb, L"%.1lf");
+		strcpy_s(ptff, "%d %.1f\n");
+		break;
+	case 2:
+		lstrcpyW(ptfb, L"%.2f");
+		strcpy_s(ptff, "%d %.2f\n");
+		break;
+	case 3:
+		lstrcpyW(ptfb, L"%.3f");
+		strcpy_s(ptff, "%d %.3f\n");
+		break;
+	}
+
 	SendMessage(edt2, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
-	dc.msegs = wcstol(wbufferOP, 0, 10)*1000; //Spare processing time on arduino
+	dc.msegs = wcstol(wbufferOP, 0, 10)*1000;								
+
 	if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		memcpy(dc.localfile, localfile, strlen(localfile));
 	}
@@ -163,6 +187,19 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 	}
 	ZeroMemory(wbuffer, sizeof(wbuffer));
+	
+	switch (dc.ganho) {
+	case 1:
+		dc.ganho = 20;	//mV
+		break;
+	case 2:
+		dc.ganho = 32;  //mV
+		break;
+	case 3:
+		dc.ganho = 64;  //mV
+		break;
+	}
+	
 	BOOL PlotEnable = FALSE;
 
 
@@ -191,10 +228,14 @@ DWORD WINAPI Thread(LPVOID lp) {
 	clock_t begin = clock(), end = 0;
 	long timelimit = dc.msegs / 1000;
 	DWORD e = 0;
+	float calcVolts = 0;
 	LVITEM lvi;
-	
+	double fct = 1;
+	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+		fct = (double)dc.ganho / (2 ^ 23);
+	}
 
-	for (DWORD status = 0, i = 0; (end - begin) / CLOCKS_PER_SEC < timelimit;) {
+	for (DWORD status = 0, i = 0; (end - begin) / CLOCKS_PER_SEC < timelimit ;) {
 		end = clock();
 		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Verify serial port events
 			if (GetLastError() == ERROR_IO_PENDING) {
@@ -226,14 +267,16 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 			if (!ReadFile(commPort, &dp, sizeof(dp), 0, &olr)) {
 				GetOverlappedResult(commPort, &olr, &readBytes, FALSE);
-				status = WaitForSingleObject(olr.hEvent, 3000);		//Waits until 3 seconds
+				status = WaitForSingleObject(olr.hEvent, 3000);		 //Waits until 3 seconds
 				if (status == WAIT_TIMEOUT) {
 					MessageBox((HWND)lp, ErrorReadFileTimeOut, L"Erro", MB_OK | MB_ICONERROR);
 					break;
 				}
 			}
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	 //Data signature
-				wsprintf(wbuffer, L"%d", dp.dt);
+				
+				calcVolts = fct * dp.dt;
+				swprintf_s(wbuffer,sizeof(wbuffer),ptfb, calcVolts);
 				//Add 'Sinal' column a new text
 				ZeroMemory(&lvi, sizeof(LVITEM));
 				lvi.mask = LVIF_TEXT;
@@ -250,15 +293,15 @@ DWORD WINAPI Thread(LPVOID lp) {
 					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file on sharing mode
 					if (record != NULL) {
 
-						fprintf(record, "%d %d\n", dp.mtime, dp.dt);
+						fprintf(record, ptff, dp.mtime, calcVolts);
 						if (!fclose(record)) {
-							if (e == 4) {			//This number must match gnuplot inline command 'every'
+							if (e == 4) {							 //This number must match gnuplot inline command 'every'
 								graph.CmdLine("plot \"tmpplot\" every 4 with lines lt rgb 'red' title 'linha' \n");
 							}
-							i++;		//plot offset
-							e++;		//index order						
+							i++;									 //plot offset
+							e++;									 //index order						
 							if (i == 10) {
-								graph.CmdLine("replot\n");//Update plot chart
+								graph.CmdLine("replot\n");			 //Update plot chart
 								i = 0;
 							}
 						}
@@ -267,7 +310,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				/*******************************/				
 			}
 			else {
-				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') {		//End of communication
+				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') { //End of communication
 					break;
 				}
 				MessageBox((HWND)lp, ErrorSync, L"Erro", MB_OK | MB_ICONERROR);
@@ -356,7 +399,7 @@ void ComponentG(HWND h,  HINSTANCE hi)
 	rect.right = 300;
 	cbPort = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_CHILD, 10, 10, 150, 100, h, 0, hi, 0);
 	rd = CreateWindowEx(0, WC_BUTTON, L"Conectar", WS_VISIBLE | WS_CHILD, 10, 50, 100, 25, h, (HMENU)1404, hi, 0);
-	rd2 = CreateWindowEx(0, WC_BUTTON, L"Iniciar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 10, 520, 100, 25, h, (HMENU)1405, hi, 0);
+	rd2 = CreateWindowEx(0, WC_BUTTON, L"Iniciar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 10, 400, 100, 25, h, (HMENU)1405, hi, 0);
 	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 250, h, (HMENU)1407, hi, 0);
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
@@ -366,7 +409,7 @@ void ComponentG(HWND h,  HINSTANCE hi)
 	st4 = CreateWindowEx(0, WC_STATIC, L"segundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 210, 80, 20, h, 0, hi, 0);
 	chk2 = CreateWindowEx(0, WC_BUTTON, L"Registro MicroSD", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 230, 150, 20, h, (HMENU)1444, hi, 0);
 	chk3 = CreateWindowEx(0, WC_BUTTON, L"Plot", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 250, 100, 20, h, (HMENU)1445, hi, 0);
-	rd3 = CreateWindowEx(0, WC_BUTTON, L"Desconectar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 130, 520, 100, 25, h, (HMENU)1406, hi, 0);
+	rd3 = CreateWindowEx(0, WC_BUTTON, L"Desconectar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 130, 400, 100, 25, h, (HMENU)1406, hi, 0);
 	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 280, 80, 20, h, 0, hi, 0);
 	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 300, 150, 100, h, 0, hi, 0);
 	lv = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEWW, 0, WS_VISIBLE | LVS_REPORT |WS_CHILD , 300, 110, 300, 500, h,(HMENU)2090, hi, 0);
@@ -387,10 +430,10 @@ void ComponentG(HWND h,  HINSTANCE hi)
 	ListView_InsertColumn(lv, 1, &lc);
 
 	//ListView_InsertItem(lv, &li);
-	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"1");
-	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.1");
-	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.01");
-	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.001");
+	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"1 mV");
+	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.1 mV");
+	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.01 mV");
+	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.001 mV");
 	SendMessage(cbPrec, CB_SETCURSEL, 0, 0);
 	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"1");
 	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"2");
@@ -539,6 +582,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else {
 					EnableWindow(cbPrec, TRUE);
+					tensaoEnabled = TRUE;
 					SendMessage(chk4, BM_SETCHECK, BST_CHECKED, 0);
 				}
 			}
@@ -676,7 +720,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
 		COLORREF oldC = SetTextColor(hdc, textColor);
-		DrawText(hdc, wbuffer, 7, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+		DrawText(hdc, wbuffer, lstrlenW(wbuffer), &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 		SetTextColor(hdc, oldC);
 		EndPaint(hWnd, &ps);
 		DeleteObject(oldFont);
@@ -690,13 +734,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (MessageBox(hWnd, WarningProgramExit, L"Aviso", MB_YESNO | MB_ICONEXCLAMATION) == IDNO) {
 				return 0;
 			}
-
+			bRunning = FALSE;
 		}
 		if (graph.IsGNUPlotRunning()) {
 			graph.FinishGNUPlotProgram();
 		}
 		TerminateThread(hThread, 0);
-		CloseHandle(hThread);
 		DestroyWindow(hWnd);
 	}
 	break;

@@ -8,7 +8,7 @@ Graficos& Graficos::GetInstanceGNUPlot() {
 	return *gr;
 }
 
-bool Graficos::GNUScript(string const& str) {
+int Graficos::GNUScript(string const& str) {
 	if(fileExist(str)<0 || !IsGNUPlotRunning()) {
 		return false;
 	}
@@ -16,20 +16,7 @@ bool Graficos::GNUScript(string const& str) {
 }
 bool Graficos::StartGNUPlotProgram(string const& strcmd) {
 	GnuFilePath.append(strcmd);
-
-	if (!CreatePipe(&hReadPipe, &hWritePipe, &sat, 0)) {
-
-		return false;
-	}
-	st.hStdError = hWritePipe;
-	st.hStdOutput = hWritePipe;
-	st.hStdInput = hReadPipe;
-	st.dwFlags = STARTF_USESTDHANDLES;
-	if (!CreateProcessA(GnuFilePath.c_str(), 0, 0, 0, TRUE, CREATE_NO_WINDOW, 0, 0, &st, &pi)) {
-		return false;
-	}
-
-	return true;
+	return StartGNUPlotProgram();
 }
 bool Graficos::StartGNUPlotProgram() {
 	if (!CreatePipe(&hReadPipe, &hWritePipe, &sat, 0)) {
