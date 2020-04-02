@@ -15,10 +15,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_ LPWSTR    lpCmdLine,
 	_In_ int       nCmdShow)
 {
-	
+
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
-	
+
 	InitCommonControls();
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
@@ -45,8 +45,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		0, 0,
 		LR_DEFAULTCOLOR | LR_DEFAULTSIZE));
 	RegisterClassExW(&wcex);
-	 
-	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_SYSMENU|WS_MINIMIZEBOX|WS_SIZEBOX,
+
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX,
 		CW_USEDEFAULT, 0, 650, 700, nullptr, nullptr, hInstance, nullptr);
 
 	ShowWindow(hWnd, nCmdShow);
@@ -83,9 +83,9 @@ NONCLIENTMETRICS ncm;
 HFONT hFont = (HFONT)NULL, lFont = (HFONT)NULL, sysFont;
 COLORREF textColor;
 HBRUSH hBrush;
-lxw_workbook *LWb = NULL;
-lxw_worksheet *LWs = NULL;
-lxw_format *LF = NULL;
+lxw_workbook* LWb = NULL;
+lxw_worksheet* LWs = NULL;
+lxw_format* LF = NULL;
 FILE* record = NULL;
 
 //Common controls
@@ -102,7 +102,7 @@ auto& graph = Graficos::GetInstanceGNUPlot();
 COMMPORTS cp;
 int nCursel;
 DWORD idThread, readBytes, writeBytes, evt;
-WCHAR  wbuffer[50],wbufferOP[50], selectedPort[20];
+WCHAR  wbuffer[50], wbufferOP[50], selectedPort[20];
 char buffer[50];
 HANDLE hThread, commPort;
 OVERLAPPED olr, olw;
@@ -113,7 +113,7 @@ BOOL tensaoEnabled = FALSE;
 //Default set
 char localfile[100] = { "teste.lsu" };
 int baudrate = 9600;
-string scripttoload = "gnuscript-example.gnu"; 
+string scripttoload = "gnuscript-example.gnu";
 
 DWORD WINAPI Thread(LPVOID lp) {
 	bRunning = TRUE;
@@ -132,14 +132,56 @@ DWORD WINAPI Thread(LPVOID lp) {
 	cp.dcb.fDtrControl = DTR_CONTROL_ENABLE;
 	cp.dcb.ByteSize = 8;
 
-
 	SendMessage(edt, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
 	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		dc.prec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
 	}
- 
+
 	dc.ganho = SendMessage(cbGanho, CB_GETCURSEL, 0, 0) + 1;
-	int nPrec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
+
+	SendMessage(edt2, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
+	dc.msegs = wcstol(wbufferOP, 0, 10) * 1000;
+	if (dc.msegs == 0) {
+		MessageBox((HWND)lp, InfoTimeLimit, L"Info", MB_OK | MB_ICONINFORMATION);
+		dc.msegs = 60000;
+	}
+	if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+		memcpy(dc.localfile, localfile, strlen(localfile));
+	}
+
+	SetCommState(commPort, &cp.dcb);
+	if (WriteFile(commPort, &dc, sizeof(dc), &writeBytes, &olw) == FALSE) {
+		if (GetLastError() == ERROR_IO_PENDING) {
+			if (GetOverlappedResult(commPort, &olw, &writeBytes, TRUE) == FALSE) {
+
+				MessageBox(0, ErrorGetOverlappedResult, L"Erro", MB_ICONERROR | MB_OK);
+				return -2;
+			}
+		}
+		else {
+			MessageBox(0, ErrorWriteFile, L"Erro", MB_ICONERROR | MB_OK);
+			return -2;
+		}
+	}
+	ZeroMemory(wbuffer, sizeof(wbuffer));
+
+	double fct = 1;
+	int nPrec = 0;
+	switch (dc.ganho) {
+	case 1:
+		dc.ganho = 20;	//mV
+		break;
+	case 2:
+		dc.ganho = 80;  //mV
+		break;
+	case 3:
+		dc.ganho = 40;  //mV
+		break;
+	}
+	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+		fct = (double)dc.ganho / (2 ^ 23);
+		nPrec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
+	}
 	WCHAR ptfb[10];
 	char ptff[10];
 	switch (nPrec) {
@@ -161,48 +203,8 @@ DWORD WINAPI Thread(LPVOID lp) {
 		break;
 	}
 
-	SendMessage(edt2, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
-	dc.msegs = wcstol(wbufferOP, 0, 10)*1000;								
 
-	if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-		memcpy(dc.localfile, localfile, strlen(localfile));
-	}
-	if (dc.msegs == 0) {
-		MessageBox((HWND)lp, InfoTimeLimit, L"Info", MB_OK | MB_ICONINFORMATION);
-		dc.msegs = 60000;
-	}
-
-	SetCommState(commPort, &cp.dcb);
-	if (WriteFile(commPort, &dc, sizeof(dc), &writeBytes, &olw) == FALSE) {
-		if (GetLastError() == ERROR_IO_PENDING) {
-			if (GetOverlappedResult(commPort, &olw, &writeBytes, TRUE) == FALSE) {
-				
-				MessageBox(0,ErrorGetOverlappedResult, L"Erro", MB_ICONERROR | MB_OK);
-				return -2;
-			}
-		}
-		else {			
-			MessageBox(0, ErrorWriteFile, L"Erro", MB_ICONERROR | MB_OK);
-			return -2;
-		}
-	}
-	ZeroMemory(wbuffer, sizeof(wbuffer));
-	
-	switch (dc.ganho) {
-	case 1:
-		dc.ganho = 20;	//mV
-		break;
-	case 2:
-		dc.ganho = 32;  //mV
-		break;
-	case 3:
-		dc.ganho = 64;  //mV
-		break;
-	}
-	
 	BOOL PlotEnable = FALSE;
-
-
 	if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		PlotEnable = TRUE;
 		if (graph.IsGNUPlotRunning()) {
@@ -215,13 +217,13 @@ DWORD WINAPI Thread(LPVOID lp) {
 		}
 		else {
 			/******************Plot Configuration*********************/
-			
+
 			//Setting plot features		
 			if (!graph.GNUScript(scripttoload)) {
 				MessageBox((HWND)lp, WarningScriptNotLoad, L"Aviso", MB_OK | MB_ICONWARNING);
 			}
 			/*********************************************************/
-			fclose(_fsopen("tmpplot","w",SH_DENYNO));
+			fclose(_fsopen("tmpplot", "w", SH_DENYNO));
 		}
 	}
 	SetCommMask(commPort, EV_RXCHAR);
@@ -230,12 +232,9 @@ DWORD WINAPI Thread(LPVOID lp) {
 	DWORD e = 0;
 	float calcVolts = 0;
 	LVITEM lvi;
-	double fct = 1;
-	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-		fct = (double)dc.ganho / (2 ^ 23);
-	}
 
-	for (DWORD status = 0, i = 0; (end - begin) / CLOCKS_PER_SEC < timelimit ;) {
+
+	for (DWORD status = 0, i = 0; (end - begin) / CLOCKS_PER_SEC < timelimit;) {
 		end = clock();
 		if (!WaitCommEvent(commPort, &evt, &olr)) {					//Verify serial port events
 			if (GetLastError() == ERROR_IO_PENDING) {
@@ -255,8 +254,8 @@ DWORD WINAPI Thread(LPVOID lp) {
 
 			}
 			else {
-				
-				MessageBox((HWND)lp,ErrorWaitCommEvent, L"Erro", MB_ICONERROR);
+
+				MessageBox((HWND)lp, ErrorWaitCommEvent, L"Erro", MB_ICONERROR);
 				COMSTAT cs;
 				ClearCommError(commPort, &readBytes, &cs);
 				break;
@@ -274,9 +273,9 @@ DWORD WINAPI Thread(LPVOID lp) {
 				}
 			}
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	 //Data signature
-				
+
 				calcVolts = fct * dp.dt;
-				swprintf_s(wbuffer,sizeof(wbuffer),ptfb, calcVolts);
+				swprintf_s(wbuffer, sizeof(wbuffer), ptfb, calcVolts);
 				//Add 'Sinal' column a new text
 				ZeroMemory(&lvi, sizeof(LVITEM));
 				lvi.mask = LVIF_TEXT;
@@ -307,7 +306,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 						}
 					}
 				}
-				/*******************************/				
+				/*******************************/
 			}
 			else {
 				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') { //End of communication
@@ -369,9 +368,9 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 				ofn.hwndOwner = h;
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "Exe\0*.exe\0";
-				if (GetOpenFileNameA(&ofn)) {					
+				if (GetOpenFileNameA(&ofn)) {
 					graph.SetGnuFilePath(ofn.lpstrFile);
-					
+
 				}
 			}
 		}
@@ -384,13 +383,13 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 		return 0;
 	}
- 
+
 	}
 	return 0;
 }
 
 
-void ComponentG(HWND h,  HINSTANCE hi)
+void ComponentG(HWND h, HINSTANCE hi)
 {
 
 	rect.bottom = 100;
@@ -412,13 +411,13 @@ void ComponentG(HWND h,  HINSTANCE hi)
 	rd3 = CreateWindowEx(0, WC_BUTTON, L"Desconectar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 130, 400, 100, 25, h, (HMENU)1406, hi, 0);
 	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 280, 80, 20, h, 0, hi, 0);
 	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 300, 150, 100, h, 0, hi, 0);
-	lv = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEWW, 0, WS_VISIBLE | LVS_REPORT |WS_CHILD , 300, 110, 300, 500, h,(HMENU)2090, hi, 0);
-	ListView_SetExtendedListViewStyle(lv, LVS_EX_FULLROWSELECT); 
+	lv = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEWW, 0, WS_VISIBLE | LVS_REPORT | WS_CHILD, 300, 110, 300, 500, h, (HMENU)2090, hi, 0);
+	ListView_SetExtendedListViewStyle(lv, LVS_EX_FULLROWSELECT);
 	LVCOLUMN lc;
-	WCHAR lvsinal[] = L"Sinal" ;
+	WCHAR lvsinal[] = L"Sinal";
 	WCHAR lvtempo[] = L"Tempo (milisegundos)";
 	ZeroMemory(&lc, sizeof(LVCOLUMN));
-	lc.mask =LVCF_TEXT|LVCF_FMT|LVCF_WIDTH;
+	lc.mask = LVCF_TEXT | LVCF_FMT | LVCF_WIDTH;
 	lc.cx = 150;
 	lc.fmt = LVCFMT_CENTER;
 	lc.cchTextMax = sizeof(lvsinal);
@@ -435,9 +434,9 @@ void ComponentG(HWND h,  HINSTANCE hi)
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.01 mV");
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.001 mV");
 	SendMessage(cbPrec, CB_SETCURSEL, 0, 0);
-	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"1");
-	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"2");
-	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"3");
+	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"128");
+	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"32");
+	SendMessage(cbGanho, CB_ADDSTRING, 0, (LPARAM)L"64");
 	SendMessage(cbGanho, CB_SETCURSEL, 0, 0);
 	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, &ncm, 0);
 	sysFont = (HFONT)CreateFontIndirect(&ncm.lfMessageFont);
@@ -467,9 +466,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
-		ComponentG(hWnd,  hInst);
-
-
+		ComponentG(hWnd, hInst);
 	}
 	break;
 
@@ -481,33 +478,85 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		if (HIWORD(wParam) == 0) {
+			if (wParam == ID_ARQUIVO_ABRIR) {
+				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+				ofn.lStructSize = sizeof(OPENFILENAMEA);
+				ofn.Flags = OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+				ofn.hwndOwner = hWnd;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
+				ofn.lpstrFilter = "LeitorSerial File (.lsu)\0*.lsu\0\0";
+				if (GetOpenFileNameA(&ofn)) {
+					AddDatatoLV(ofn.lpstrFile, lv);
+				}
+
+			}
 			if (wParam == ID_ARQUIVO_SALVAR) {
 				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
 				ofn.lStructSize = sizeof(OPENFILENAMEA);
-				ofn.Flags = OFN_PATHMUSTEXIST  | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
 				ofn.hwndOwner = hWnd;
 				ofn.nMaxFile = MAX_PATH;
-				ofn.lpstrFile = (char*)calloc(MAX_PATH,sizeof(char));
+				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
+				ofn.lpstrFilter = "LeitorSerial File (.lsu)\0*.lsu\0\0";
+				if (GetSaveFileNameA(&ofn)) {
+					FileHeader fh;
+					FileData fd;
+					fh.ID[0] = 'L'; fh.ID[1] = 'S'; fh.ID[2] = 'U';
+					int qtLb = SendMessage(lv, LVM_GETITEMCOUNT, 0, 0);
+					fh.nblocks = qtLb;
+					LVITEM lvi;
+					if (ofn.nFileExtension == 0) {
+						sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.lsu", ofn.lpstrFile);
+					}
+					if (qtLb > 0) {
+						fopen_s(&record, ofn.lpstrFile, "wb");
+						fwrite(&fh, sizeof(FileHeader), 1, record);
+						lvi.mask = LVIF_TEXT;
+						lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
+						lvi.cchTextMax = sizeof(wbuffer);
+						for (long i = 0; i < qtLb; i++) {
+							lvi.iSubItem = 0;
+							lvi.iItem = i;
+							ListView_GetItem(lv, &lvi);
+							fd.dt = wcstol(lvi.pszText, 0, 10);
+							
+							lvi.iSubItem = 1;
+							ListView_GetItem(lv, &lvi);
+							fd.mtime = wcstol(lvi.pszText, 0, 10);
+							fwrite(&fd, sizeof(FileData), 1, record);
+						}
+						fclose(record);
+					}
+				}
+			}
+			if (wParam == ID_ARQUIVO_EXPORTAR) {
+				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+				ofn.lStructSize = sizeof(OPENFILENAMEA);
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_OVERWRITEPROMPT;
+				ofn.hwndOwner = hWnd;
+				ofn.nMaxFile = MAX_PATH;
+				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
 				if (GetSaveFileNameA(&ofn)) {
 					LVITEM lvi;
 					int qtLb = SendMessage(lv, LVM_GETITEMCOUNT, 0, 0);
 					if (ofn.nFilterIndex == 1) {			//Excel extension selected
 						if (ofn.nFileExtension == 0) {
-							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.xlsx", ofn.lpstrFile);
+							sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.xlsx", ofn.lpstrFile);
 						}
 						LWb = workbook_new(ofn.lpstrFile);
 						LWs = workbook_add_worksheet(LWb, "Leitor Serial");
 						LF = workbook_add_format(LWb);
 						format_set_font_name(LF, "Arial");
 						if (qtLb > 0) {
-							
+
 							lvi.mask = LVIF_TEXT;
 							lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
 							lvi.cchTextMax = 100;
 							for (long i = 0, c; i < qtLb; i++) {
 								lvi.iSubItem = 0;
-								lvi.iItem = i;								
+								lvi.iItem = i;
 								ListView_GetItem(lv, &lvi);
 								c = wcstol(lvi.pszText, 0, 10);
 								worksheet_write_number(LWs, i, 0, c, LF);
@@ -523,7 +572,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					}
 					if (ofn.nFilterIndex == 2) {			//txt extension selected
 						if (ofn.nFileExtension == 0) {
-							sprintf_s(ofn.lpstrFile,MAX_PATH, "%s.txt", ofn.lpstrFile);
+							sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.txt", ofn.lpstrFile);
 						}
 						fopen_s(&record, ofn.lpstrFile, "w");
 						if (record == NULL) {
@@ -534,7 +583,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 							lvi.mask = LVIF_TEXT;
 							lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
 							lvi.cchTextMax = 100;
-							for (long i = 0,c,d; i < qtLb; i++) {
+							for (long i = 0, c, d; i < qtLb; i++) {
 								lvi.iSubItem = 0;
 								lvi.iItem = i;
 								ListView_GetItem(lv, &lvi);
@@ -543,12 +592,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 								lvi.iSubItem = 1;
 								ListView_GetItem(lv, &lvi);
 								d = wcstol(lvi.pszText, 0, 10);
-								fprintf(record, "%d %d\n", d,c);
+								fprintf(record, "%d %d\n", d, c);
 							}
 							free(lvi.pszText);
 						}
 						fclose(record);
-					
+
 					}
 					if (lParam == 1) {
 						memset(wbuffer, 0, sizeof(wbuffer));
@@ -564,7 +613,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else {
 					SendMessage(chk2, BM_SETCHECK, BST_CHECKED, 0);
-					
+
 				}
 			}
 			if (wParam == 1445) {
@@ -608,7 +657,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (wParam == 1406) {
 				CloseHandle(commPort);
 
-				EnableWindow(cbPort, TRUE);				
+				EnableWindow(cbPort, TRUE);
 				EnableWindow(cbPrec, FALSE);
 				EnableWindow(cbGanho, FALSE);
 				EnableWindow(rd, TRUE);
@@ -634,11 +683,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						ListView_DeleteAllItems(lv);
 						InvalidateRect(hWnd, 0, TRUE);
 					}
-					else {						
+					else {
 						SendMessage(hWnd, WM_COMMAND, ID_ARQUIVO_SALVAR, (LPARAM)1);
 						break;
 					}
-					
+
 				}
 				nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
 				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);

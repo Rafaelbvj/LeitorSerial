@@ -1,7 +1,9 @@
 #pragma once
 #include <Windows.h>
+#include <CommCtrl.h>
 #include <vector>
 #include <string>
+#include "ErrorList.h"
 using namespace std;
 typedef struct dataconf {
 	unsigned int msegs;					//Sampling duration
@@ -21,4 +23,13 @@ typedef struct commports{
 	DCB dcb{ 0 };
 	COMMTIMEOUTS ct{ 0 };
 }COMMPORTS;
-int AddPortsNametoCB(COMMPORTS&,HWND);
+typedef struct filedata {
+	int mtime;
+	int dt;
+}FileData;
+typedef struct fileheader {
+	char ID[3];
+	int nblocks;
+}FileHeader;
+int AddDatatoLV(string,HWND&);
+int AddPortsNametoCB(COMMPORTS&,HWND&);
