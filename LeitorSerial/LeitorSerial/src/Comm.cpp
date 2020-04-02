@@ -5,14 +5,15 @@ int AddDatatoLV(string str, HWND& lv) {
 	LVITEM lvi;
 	ZeroMemory(&lvi, sizeof(LVITEM));
 	if (fopen_s(&file, str.c_str(), "rb")!=0) {
-		MessageBox(0, ErrorOpenFile,L"Erro",MB_OK);
+		MessageBox(0, L"Erro ao abrir o arquivo.",L"Erro",MB_OK);
 		return errno;
 	}
+
 	fread(&fh, sizeof(FileHeader), 1, file);
 	if (fh.ID[0] != 'L' || fh.ID[1] != 'S' || fh.ID[2] != 'U') {
-		MessageBox(0, ErrorBrokenFile, L"Erro", MB_OK);
+		MessageBox(0, L"Arquivo invalido ou corrompido.", L"Erro", MB_OK);
 		return -2;
-	}
+	}  
 	size_t s = sizeof(FileData) * fh.nblocks, read =0;
 	FileData* fd = (FileData*)malloc(s);
 	WCHAR* wstr = (WCHAR*)malloc(sizeof(WCHAR) * 20);
@@ -20,10 +21,10 @@ int AddDatatoLV(string str, HWND& lv) {
 		read+=fread(fd, sizeof(FileData), fh.nblocks, file);
 	} while (!feof(file));
 	if (read < fh.nblocks) {
-		MessageBox(0, ErrorBrokenFile, L"Erro", MB_OK);
+		MessageBox(0, L"Arquivo invalido ou corrompido.", L"Erro", MB_OK);
 		return -1;			
 	}
-	for (long i = 0;i<fh.nblocks; i++) {
+	for (size_t i = 0;i<fh.nblocks; i++) {
 		wsprintf(wstr, L"%d", fd[i].dt);
 		lvi.mask = LVIF_TEXT;
 		lvi.iItem = i;

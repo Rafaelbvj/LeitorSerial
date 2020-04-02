@@ -230,7 +230,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	clock_t begin = clock(), end = 0;
 	long timelimit = dc.msegs / 1000;
 	DWORD e = 0;
-	float calcVolts = 0;
+	double calcVolts = 0;
 	LVITEM lvi;
 
 

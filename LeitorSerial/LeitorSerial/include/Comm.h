@@ -3,7 +3,7 @@
 #include <CommCtrl.h>
 #include <vector>
 #include <string>
-#include "ErrorList.h"
+
 using namespace std;
 typedef struct dataconf {
 	unsigned int msegs;					//Sampling duration
@@ -29,7 +29,7 @@ typedef struct filedata {
 }FileData;
 typedef struct fileheader {
 	char ID[3];
-	int nblocks;
+	size_t nblocks;
 }FileHeader;
 int AddDatatoLV(string,HWND&);
 int AddPortsNametoCB(COMMPORTS&,HWND&);

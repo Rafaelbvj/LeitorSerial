@@ -1,6 +1,4 @@
 #pragma once
-WCHAR ErrorBrokenFile[] = L"Arquivo invalido ou corrompido.";
-WCHAR ErrorOpenFile[] = L"Erro ao abrir o arquivo.";
 WCHAR ErrorCreateEvent[] = L"Erro CreateEvent.";
 WCHAR ErrorGetOverlappedResult[] = L"Erro GetOverlappedResult.";
 WCHAR ErrorWriteFile[] = L"Erro WriteFile.";
