@@ -489,6 +489,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				if (GetOpenFileNameA(&ofn)) {
 					AddDatatoLV(ofn.lpstrFile, lv);
 				}
+				free(ofn.lpstrFile);
 
 			}
 			if (wParam == ID_ARQUIVO_SALVAR) {
@@ -527,6 +528,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 							fwrite(&fd, sizeof(FileData), 1, record);
 						}
 						fclose(record);
+						free(lvi.pszText);
 					}
 				}
 			}
@@ -599,7 +601,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						fclose(record);
 
 					}
-					if (lParam == 1) {
+					//It occurs when attempt to connect without saving the list first, so the listview must be cleared after saving it.
+					if (lParam == 1) { 
 						memset(wbuffer, 0, sizeof(wbuffer));
 						ListView_DeleteAllItems(lv);
 						InvalidateRect(hWnd, 0, TRUE);
@@ -613,7 +616,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else {
 					SendMessage(chk2, BM_SETCHECK, BST_CHECKED, 0);
-
 				}
 			}
 			if (wParam == 1445) {
