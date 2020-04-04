@@ -83,34 +83,31 @@ NONCLIENTMETRICS ncm;
 HFONT hFont = (HFONT)NULL, lFont = (HFONT)NULL, sysFont;
 COLORREF textColor;
 HBRUSH hBrush;
-lxw_workbook* LWb = NULL;
-lxw_worksheet* LWs = NULL;
-lxw_format* LF = NULL;
-FILE* record = NULL;
+FILE* record;
 
 //Common controls
-
-HWND cbPort, cbPrec, cbGanho;					//Combobox's
-HWND edt, edt2;									//Edit
+HWND cbPort, cbPrec, cbGanho;					//Comboboxes
+HWND edt2;										//Edits
 HWND rd, rd2, rd3, chk1, chk2, chk3, chk4;		//Buttons
 HWND st, st1, st2, st3, st4, st5;				//Statics
-HWND lv;										//ListView
+HWND lv;										//ListViews
 //Plot vars
 auto& graph = Graficos::GetInstanceGNUPlot();
 
 //Communication vars
 COMMPORTS cp;
-int nCursel;
 DWORD idThread, readBytes, writeBytes, evt;
-WCHAR  wbuffer[50], wbufferOP[50], selectedPort[20];
-char buffer[50];
 HANDLE hThread, commPort;
 OVERLAPPED olr, olw;
 DataConf dc;
 DataProtocol dp;
-BOOL bRunning;
-BOOL tensaoEnabled = FALSE;
-//Default set
+WCHAR  wbuffer[50];
+
+//State vars
+BOOL bRunning = FALSE;
+int tensaoType = INT_32BITS;
+
+//Default sets
 char localfile[100] = { "teste.lsu" };
 int baudrate = 9600;
 string scripttoload = "gnuscript-example.gnu";
@@ -132,15 +129,14 @@ DWORD WINAPI Thread(LPVOID lp) {
 	cp.dcb.fDtrControl = DTR_CONTROL_ENABLE;
 	cp.dcb.ByteSize = 8;
 
-	SendMessage(edt, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
 	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		dc.prec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
 	}
 
 	dc.ganho = SendMessage(cbGanho, CB_GETCURSEL, 0, 0) + 1;
 
-	SendMessage(edt2, WM_GETTEXT, sizeof(wbufferOP), (LPARAM)wbufferOP);
-	dc.msegs = wcstol(wbufferOP, 0, 10) * 1000;
+	SendMessage(edt2, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
+	dc.msegs = wcstol(wbuffer, 0, 10) * 1000;
 	if (dc.msegs == 0) {
 		MessageBox((HWND)lp, InfoTimeLimit, L"Info", MB_OK | MB_ICONINFORMATION);
 		dc.msegs = 60000;
@@ -179,6 +175,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 		break;
 	}
 	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+		tensaoType = FLOAT_32BITS;
 		fct = (double)dc.ganho / (2 ^ 23);
 		nPrec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
 	}
@@ -216,8 +213,8 @@ DWORD WINAPI Thread(LPVOID lp) {
 			PlotEnable = FALSE;
 		}
 		else {
-			/******************Plot Configuration*********************/
 
+			/******************Plot Configuration*********************/
 			//Setting plot features		
 			if (!graph.GNUScript(scripttoload)) {
 				MessageBox((HWND)lp, WarningScriptNotLoad, L"Aviso", MB_OK | MB_ICONWARNING);
@@ -273,25 +270,25 @@ DWORD WINAPI Thread(LPVOID lp) {
 				}
 			}
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	 //Data signature
-
 				calcVolts = fct * dp.dt;
 				swprintf_s(wbuffer, sizeof(wbuffer), ptfb, calcVolts);
-				//Add 'Sinal' column a new text
+
+				//Add 'Sinal' column a new item
 				ZeroMemory(&lvi, sizeof(LVITEM));
 				lvi.mask = LVIF_TEXT;
 				lvi.pszText = wbuffer;
 				lvi.iItem = e;
 				lvi.cchTextMax = wcslen(wbuffer);
 				ListView_InsertItem(lv, &lvi);
-				//Add 'Tempo' column a new text
-				wsprintf(wbufferOP, L"%d", dp.mtime);
-				ListView_SetItemText(lv, e, 1, wbufferOP);
+
+				//Add 'Tempo' column a new item
+				wsprintf(wbuffer, L"%d", dp.mtime);
+				ListView_SetItemText(lv, e, 1, wbuffer);
 
 				/******Update plot file********/
 				if (PlotEnable) {
-					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file on sharing mode
+					record = _fsopen("tmpplot", "a", SH_DENYNO);     //Open file in sharing mode
 					if (record != NULL) {
-
 						fprintf(record, ptff, dp.mtime, calcVolts);
 						if (!fclose(record)) {
 							if (e == 4) {							 //This number must match gnuplot inline command 'every'
@@ -309,7 +306,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				/*******************************/
 			}
 			else {
-				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') { //End of communication
+				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') { //End of communication sign
 					break;
 				}
 				MessageBox((HWND)lp, ErrorSync, L"Erro", MB_OK | MB_ICONERROR);
@@ -336,51 +333,45 @@ INT_PTR CALLBACK  DialogOP(HWND h, UINT msg, WPARAM wParam, LPARAM lParam) {
 		SendMessage(GetDlgItem(h, IDC_BAUDRATE), WM_SETTEXT, 4, (LPARAM)L"9600");
 		SendMessage(GetDlgItem(h, IDC_EDIT1), EM_SETLIMITTEXT, 100, 0);
 		SendMessage(GetDlgItem(h, IDC_BAUDRATE), EM_SETLIMITTEXT, 6, 0);
-
+		ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
+		ofn.nMaxFile = MAX_PATH;
+		ofn.hwndOwner = h;
 		break;
 	case WM_COMMAND:
 	{
 		if (HIWORD(wParam) == 0) {
 			if (LOWORD(wParam) == IDC_OPOK) {
 				memset(localfile, 0, sizeof(localfile));
+				char strBR[7];
 				SendMessageA(GetDlgItem(h, IDC_EDIT1), WM_GETTEXT, 100, (LPARAM)localfile);
-				SendMessageA(GetDlgItem(h, IDC_BAUDRATE), WM_GETTEXT, 50, (LPARAM)buffer);
-				baudrate = strtol(buffer, 0, 10);
+				SendMessageA(GetDlgItem(h, IDC_BAUDRATE), WM_GETTEXT, 50, (LPARAM)strBR);
+				baudrate = strtol(strBR, 0, 10);
 				SendMessage(h, WM_CLOSE, 0, 0);
 			}
-			if (LOWORD(wParam) == IDC_SCRIPT) {
-				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-				ofn.nMaxFile = MAX_PATH;
-				ofn.hwndOwner = h;
+			if (LOWORD(wParam) == IDC_SCRIPT) {	
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "All\0*.*\0";
 				if (GetOpenFileNameA(&ofn)) {
 					scripttoload = ofn.lpstrFile;
 				}
+				free(ofn.lpstrFile);
 			}
 			if (LOWORD(wParam) == IDC_GNUFILE) {
-				ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_NOCHANGEDIR;
-				ofn.nMaxFile = MAX_PATH;
-				ofn.hwndOwner = h;
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "Exe\0*.exe\0";
 				if (GetOpenFileNameA(&ofn)) {
 					graph.SetGnuFilePath(ofn.lpstrFile);
-
 				}
+				free(ofn.lpstrFile);
 			}
 		}
 	}
 	break;
 	case WM_CLOSE:
 	{
-
 		EndDialog(h, 0);
-
 		return 0;
 	}
 
@@ -397,18 +388,18 @@ void ComponentG(HWND h, HINSTANCE hi)
 	rect.left = 600;
 	rect.right = 300;
 	cbPort = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_CHILD, 10, 10, 150, 100, h, 0, hi, 0);
-	rd = CreateWindowEx(0, WC_BUTTON, L"Conectar", WS_VISIBLE | WS_CHILD, 10, 50, 100, 25, h, (HMENU)1404, hi, 0);
-	rd2 = CreateWindowEx(0, WC_BUTTON, L"Iniciar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 10, 400, 100, 25, h, (HMENU)1405, hi, 0);
+	rd = CreateWindowEx(0, WC_BUTTON, L"Conectar", WS_VISIBLE | WS_CHILD, 10, 50, 100, 25, h, (HMENU)CONECTAR_BUTTON, hi, 0);
+	rd2 = CreateWindowEx(0, WC_BUTTON, L"Iniciar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 10, 400, 100, 25, h, (HMENU)INICIAR_BUTTON, hi, 0);
 	chk1 = CreateWindowEx(0, WC_BUTTON, L"Configurações", WS_VISIBLE | WS_CHILD | BS_GROUPBOX, 10, 100, 250, 250, h, (HMENU)1407, hi, 0);
 	st = CreateWindowEx(0, WC_STATIC, L"Casas decimais:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 130, 110, 20, h, 0, hi, 0);
 	cbPrec = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 150, 150, 100, h, 0, hi, 0);
-	chk4 = CreateWindowEx(0, WC_BUTTON, L"Tensão", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 70, 20, h, (HMENU)1478, hi, 0);
+	chk4 = CreateWindowEx(0, WC_BUTTON, L"Tensão", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | WS_DISABLED, 170, 150, 70, 20, h, (HMENU)TENSAO_CHECKBUTTON, hi, 0);
 	edt2 = CreateWindowEx(WS_EX_CLIENTEDGE, WC_EDIT, 0, WS_VISIBLE | WS_CHILD | ES_NUMBER | WS_DISABLED, 15, 210, 150, 20, h, 0, hi, 0);
 	st3 = CreateWindowEx(0, WC_STATIC, L"Tempo de amostragem:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 190, 160, 20, h, 0, hi, 0);
 	st4 = CreateWindowEx(0, WC_STATIC, L"segundos", WS_VISIBLE | WS_CHILD | WS_DISABLED, 170, 210, 80, 20, h, 0, hi, 0);
-	chk2 = CreateWindowEx(0, WC_BUTTON, L"Registro MicroSD", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 230, 150, 20, h, (HMENU)1444, hi, 0);
-	chk3 = CreateWindowEx(0, WC_BUTTON, L"Plot", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 250, 100, 20, h, (HMENU)1445, hi, 0);
-	rd3 = CreateWindowEx(0, WC_BUTTON, L"Desconectar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 130, 400, 100, 25, h, (HMENU)1406, hi, 0);
+	chk2 = CreateWindowEx(0, WC_BUTTON, L"Registro MicroSD", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 230, 150, 20, h, (HMENU)MICROSD_CHECKBUTTON, hi, 0);
+	chk3 = CreateWindowEx(0, WC_BUTTON, L"Plot", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_NOTIFY | WS_DISABLED, 15, 250, 100, 20, h, (HMENU)PLOT_CHECKBUTTON, hi, 0);
+	rd3 = CreateWindowEx(0, WC_BUTTON, L"Desconectar", WS_VISIBLE | WS_CHILD | WS_DISABLED, 130, 400, 100, 25, h, (HMENU)DESCONECTAR_BUTTON, hi, 0);
 	st5 = CreateWindowEx(0, WC_STATIC, L"Ganho:", WS_VISIBLE | WS_CHILD | WS_DISABLED, 15, 280, 80, 20, h, 0, hi, 0);
 	cbGanho = CreateWindowEx(0, WC_COMBOBOX, 0, CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VISIBLE | WS_DISABLED | WS_CHILD, 15, 300, 150, 100, h, 0, hi, 0);
 	lv = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEWW, 0, WS_VISIBLE | LVS_REPORT | WS_CHILD, 300, 110, 300, 500, h, (HMENU)2090, hi, 0);
@@ -456,7 +447,6 @@ void ComponentG(HWND h, HINSTANCE hi)
 	SendMessage(chk2, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(chk3, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(chk4, WM_SETFONT, (WPARAM)sysFont, 0);
-	SendMessage(edt, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(edt2, WM_SETFONT, (WPARAM)sysFont, 0);
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -473,7 +463,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 	{
 		if (HIWORD(wParam) == CBN_DROPDOWN) {
-			if (IsWindowEnabled(cbPort)) {
+			if (IsWindowEnabled(cbPort)) {				//Verify COM ports available
 				AddPortsNametoCB(cp, cbPort);
 			}
 		}
@@ -487,7 +477,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "LeitorSerial File (.lsu)\0*.lsu\0\0";
 				if (GetOpenFileNameA(&ofn)) {
-					AddDatatoLV(ofn.lpstrFile, lv);
+					PutDataInLV(ofn.lpstrFile, lv);
 				}
 				free(ofn.lpstrFile);
 
@@ -501,35 +491,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "LeitorSerial File (.lsu)\0*.lsu\0\0";
 				if (GetSaveFileNameA(&ofn)) {
-					FileHeader fh;
-					FileData fd;
-					fh.ID[0] = 'L'; fh.ID[1] = 'S'; fh.ID[2] = 'U';
-					int qtLb = SendMessage(lv, LVM_GETITEMCOUNT, 0, 0);
-					fh.nblocks = qtLb;
-					LVITEM lvi;
 					if (ofn.nFileExtension == 0) {
 						sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.lsu", ofn.lpstrFile);
 					}
-					if (qtLb > 0) {
-						fopen_s(&record, ofn.lpstrFile, "wb");
-						fwrite(&fh, sizeof(FileHeader), 1, record);
-						lvi.mask = LVIF_TEXT;
-						lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
-						lvi.cchTextMax = sizeof(wbuffer);
-						for (long i = 0; i < qtLb; i++) {
-							lvi.iSubItem = 0;
-							lvi.iItem = i;
-							ListView_GetItem(lv, &lvi);
-							fd.dt = wcstol(lvi.pszText, 0, 10);
-							
-							lvi.iSubItem = 1;
-							ListView_GetItem(lv, &lvi);
-							fd.mtime = wcstol(lvi.pszText, 0, 10);
-							fwrite(&fd, sizeof(FileData), 1, record);
-						}
-						fclose(record);
-						free(lvi.pszText);
-					}
+					SaveFile(ofn.lpstrFile, lv, tensaoType);
+					
 				}
 			}
 			if (wParam == ID_ARQUIVO_EXPORTAR) {
@@ -541,66 +507,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
 				if (GetSaveFileNameA(&ofn)) {
-					LVITEM lvi;
-					int qtLb = SendMessage(lv, LVM_GETITEMCOUNT, 0, 0);
 					if (ofn.nFilterIndex == 1) {			//Excel extension selected
 						if (ofn.nFileExtension == 0) {
 							sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.xlsx", ofn.lpstrFile);
 						}
-						LWb = workbook_new(ofn.lpstrFile);
-						LWs = workbook_add_worksheet(LWb, "Leitor Serial");
-						LF = workbook_add_format(LWb);
-						format_set_font_name(LF, "Arial");
-						if (qtLb > 0) {
-
-							lvi.mask = LVIF_TEXT;
-							lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
-							lvi.cchTextMax = 100;
-							for (long i = 0, c; i < qtLb; i++) {
-								lvi.iSubItem = 0;
-								lvi.iItem = i;
-								ListView_GetItem(lv, &lvi);
-								c = wcstol(lvi.pszText, 0, 10);
-								worksheet_write_number(LWs, i, 0, c, LF);
-
-								lvi.iSubItem = 1;
-								ListView_GetItem(lv, &lvi);
-								c = wcstol(lvi.pszText, 0, 10);
-								worksheet_write_number(LWs, i, 1, c, LF);
-							}
-							free(lvi.pszText);
-						}
-						workbook_close(LWb);
 					}
 					if (ofn.nFilterIndex == 2) {			//txt extension selected
 						if (ofn.nFileExtension == 0) {
 							sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.txt", ofn.lpstrFile);
 						}
-						fopen_s(&record, ofn.lpstrFile, "w");
-						if (record == NULL) {
-							MessageBox(hWnd, ErrorFileOpen, L"Erro", MB_OK | MB_ICONERROR);
-							return -1;
-						}
-						if (qtLb > 0) {
-							lvi.mask = LVIF_TEXT;
-							lvi.pszText = (wchar_t*)malloc(sizeof(wbuffer));
-							lvi.cchTextMax = 100;
-							for (long i = 0, c, d; i < qtLb; i++) {
-								lvi.iSubItem = 0;
-								lvi.iItem = i;
-								ListView_GetItem(lv, &lvi);
-								c = wcstol(lvi.pszText, 0, 10);
-
-								lvi.iSubItem = 1;
-								ListView_GetItem(lv, &lvi);
-								d = wcstol(lvi.pszText, 0, 10);
-								fprintf(record, "%d %d\n", d, c);
-							}
-							free(lvi.pszText);
-						}
-						fclose(record);
-
 					}
+					ExportFile(ofn.lpstrFile, lv, ofn.nFileExtension, tensaoType);
 					//It occurs when attempt to connect without saving the list first, so the listview must be cleared after saving it.
 					if (lParam == 1) { 
 						memset(wbuffer, 0, sizeof(wbuffer));
@@ -610,7 +527,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				free(ofn.lpstrFile);
 			}
-			if (wParam == 1444) {
+			if (wParam == MICROSD_CHECKBUTTON) {
 				if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 					SendMessage(chk2, BM_SETCHECK, BST_UNCHECKED, 0);
 				}
@@ -618,7 +535,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					SendMessage(chk2, BM_SETCHECK, BST_CHECKED, 0);
 				}
 			}
-			if (wParam == 1445) {
+			if (wParam == PLOT_CHECKBUTTON) {
 				if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 					SendMessage(chk3, BM_SETCHECK, BST_UNCHECKED, 0);
 				}
@@ -626,14 +543,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					SendMessage(chk3, BM_SETCHECK, BST_CHECKED, 0);
 				}
 			}
-			if (wParam == 1478) {
+			if (wParam == TENSAO_CHECKBUTTON) {
 				if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 					SendMessage(chk4, BM_SETCHECK, BST_UNCHECKED, 0);
 					EnableWindow(cbPrec, FALSE);
+					tensaoType = INT_32BITS;
 				}
 				else {
-					EnableWindow(cbPrec, TRUE);
-					tensaoEnabled = TRUE;
+					EnableWindow(cbPrec, TRUE);					
 					SendMessage(chk4, BM_SETCHECK, BST_CHECKED, 0);
 				}
 			}
@@ -656,7 +573,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
 			}
-			if (wParam == 1406) {
+			if (wParam == DESCONECTAR_BUTTON) {
 				CloseHandle(commPort);
 
 				EnableWindow(cbPort, TRUE);
@@ -665,7 +582,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				EnableWindow(rd, TRUE);
 				EnableWindow(rd2, FALSE);
 				EnableWindow(rd3, FALSE);
-				EnableWindow(edt, FALSE);
 				EnableWindow(edt2, FALSE);
 				EnableWindow(st, FALSE);
 				EnableWindow(st1, FALSE);
@@ -678,7 +594,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				EnableWindow(chk3, FALSE);
 				EnableWindow(chk4, FALSE);
 			}
-			if (wParam == 1404) {
+			if (wParam == CONECTAR_BUTTON) {
 				if (ListView_GetItemCount(lv) > 0) {
 					if (MessageBox(hWnd, WarningSaveFile, L"Aviso", MB_YESNO | MB_ICONWARNING) == IDNO) {
 						memset(wbuffer, 0, sizeof(wbuffer));
@@ -691,7 +607,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					}
 
 				}
-				nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
+				int nCursel = SendMessage(cbPort, CB_GETCURSEL, 0, 0);
+				WCHAR selectedPort[20];
 				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
 				commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 				if (commPort == INVALID_HANDLE_VALUE) {
@@ -704,7 +621,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					EnableWindow(rd3, TRUE);
 					EnableWindow(cbPort, FALSE);
 					EnableWindow(cbGanho, TRUE);
-					EnableWindow(edt, TRUE);
 					EnableWindow(edt2, TRUE);
 					EnableWindow(st, TRUE);
 					EnableWindow(st1, TRUE);
@@ -719,12 +635,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 
 			}
-			if (wParam == 1405) {
+			if (wParam == INICIAR_BUTTON) {
 				EnableWindow(cbPrec, FALSE);
 				EnableWindow(cbGanho, FALSE);
 				EnableWindow(rd2, FALSE);
 				EnableWindow(rd3, FALSE);
-				EnableWindow(edt, FALSE);
 				EnableWindow(edt2, FALSE);
 				EnableWindow(st, FALSE);
 				EnableWindow(st1, FALSE);

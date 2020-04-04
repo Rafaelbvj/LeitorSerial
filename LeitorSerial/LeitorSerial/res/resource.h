@@ -2,6 +2,13 @@
 // Arquivo de inclusão gerado pelo Microsoft Visual C++.
 // Usado por LeitorSerial.rc
 //
+#define PLOT_CHECKBUTTON				1445
+#define TENSAO_CHECKBUTTON              1478
+#define MICROSD_CHECKBUTTON				1444
+#define CONECTAR_BUTTON					1404
+#define INICIAR_BUTTON					1405
+#define DESCONECTAR_BUTTON				1406
+
 #define IDC_MYICON                      2
 #define IDD_FORMVIEW                    101
 #define IDD_WINDOWSPROJECT1_DIALOG      102

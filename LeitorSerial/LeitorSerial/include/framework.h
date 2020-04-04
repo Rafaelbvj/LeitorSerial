@@ -9,7 +9,6 @@
 #include "Comm.h"
 #include "Graficos.h"
 #include "ErrorList.h"
-#include <xlsxwriter.h>
 
 // Arquivos de Cabeçalho do Windows
 #include <windows.h>

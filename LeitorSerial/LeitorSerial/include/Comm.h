@@ -3,7 +3,9 @@
 #include <CommCtrl.h>
 #include <vector>
 #include <string>
-
+#include <xlsxwriter.h>
+#define FLOAT_32BITS	  1
+#define INT_32BITS	  0
 using namespace std;
 typedef struct dataconf {
 	unsigned int msegs;					//Sampling duration
@@ -29,7 +31,10 @@ typedef struct filedata {
 }FileData;
 typedef struct fileheader {
 	char ID[3];
+	char type;
 	size_t nblocks;
 }FileHeader;
-int AddDatatoLV(string,HWND&);
+int SaveFile(string, HWND&, int);
+int PutDataInLV(string,HWND&);
+int ExportFile(string, HWND&,int, int);
 int AddPortsNametoCB(COMMPORTS&,HWND&);
