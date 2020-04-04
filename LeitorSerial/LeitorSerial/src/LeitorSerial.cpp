@@ -419,7 +419,6 @@ void ComponentG(HWND h, HINSTANCE hi)
 	lc.cchTextMax = sizeof(lvtempo);
 	ListView_InsertColumn(lv, 1, &lc);
 
-	//ListView_InsertItem(lv, &li);
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"1 mV");
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.1 mV");
 	SendMessage(cbPrec, CB_ADDSTRING, 0, (LPARAM)L"0.01 mV");
@@ -507,17 +506,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				ofn.lpstrFile = (char*)calloc(MAX_PATH, sizeof(char));
 				ofn.lpstrFilter = "Excel (.xlsx)\0*.*\0Text ANSI (.txt)\0*.*\0\0";
 				if (GetSaveFileNameA(&ofn)) {
-					if (ofn.nFilterIndex == 1) {			//Excel extension selected
-						if (ofn.nFileExtension == 0) {
+					if (ofn.nFileExtension == 0) {
+						if (ofn.nFilterIndex == 1) {									//Excel extension selected
 							sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.xlsx", ofn.lpstrFile);
 						}
-					}
-					if (ofn.nFilterIndex == 2) {			//txt extension selected
-						if (ofn.nFileExtension == 0) {
+						if (ofn.nFilterIndex == 2) {									//Plain text extension selected
 							sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.txt", ofn.lpstrFile);
 						}
 					}
 					ExportFile(ofn.lpstrFile, lv, ofn.nFileExtension, tensaoType);
+					
 					//It occurs when attempt to connect without saving the list first, so the listview must be cleared after saving it.
 					if (lParam == 1) { 
 						memset(wbuffer, 0, sizeof(wbuffer));
@@ -556,10 +554,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			if (wParam == ID_OP) {
 				DialogBox(hInst, MAKEINTRESOURCE(IDD_FORMVIEW), hWnd, DialogOP);
-
 			}
 			if (wParam == ID_FONTE) {
-
 				ZeroMemory(&lpc, sizeof(lpc));
 				lpc.lStructSize = sizeof(CHOOSEFONT);
 				lpc.Flags = CF_EFFECTS | CF_SCREENFONTS;
@@ -570,7 +566,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					hFont = CreateFontIndirect(&logF);
 					InvalidateRect(hWnd, 0, TRUE);
 				}
-
 
 			}
 			if (wParam == DESCONECTAR_BUTTON) {
