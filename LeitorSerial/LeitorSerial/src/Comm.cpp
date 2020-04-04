@@ -30,6 +30,7 @@ int ExportFile(string pathfile, HWND& lv,int ext, int type) {
 					break;
 				case FLOAT_32BITS:
 					c = wcstold(lvi.pszText, 0);
+					break;
 				}
 				worksheet_write_number(LWs, i, 0, c, LF);
 				lvi.iSubItem = 1;
