@@ -1,13 +1,16 @@
 #include "Comm.h"
-int ExportFile(string pathfile, HWND& lv,int ext, int type) {
-	LVITEM lvi;
+
+int ExportFile(string pathfile, HWND& lv,int index, int type) {
 	lxw_workbook* LWb = NULL;
 	lxw_worksheet* LWs = NULL;
 	lxw_format* LF = NULL;
 	FILE* record = NULL;
+	LVITEM lvi;
+	ZeroMemory(&lvi, sizeof(LVITEM));
 	int qtLb = SendMessage(lv, LVM_GETITEMCOUNT, 0, 0);
+
 	if (qtLb > 0) {
-		if (ext == 1) {
+		if (index == 1) {
 			LWb = workbook_new(pathfile.c_str());
 			if (LWb == NULL) {
 				MessageBox(0, L"Erro ao exportar o arquivo.", L"Erro", MB_OK | MB_ICONERROR);
@@ -19,7 +22,7 @@ int ExportFile(string pathfile, HWND& lv,int ext, int type) {
 			lvi.mask = LVIF_TEXT;
 			lvi.pszText = (wchar_t*)malloc(20);
 			lvi.cchTextMax = 20;
-			double c;
+			double c = 0;
 			for (lxw_col_t i = 0; i < qtLb; i++) {
 				lvi.iSubItem = 0;
 				lvi.iItem = i;
@@ -40,10 +43,10 @@ int ExportFile(string pathfile, HWND& lv,int ext, int type) {
 			}
 			workbook_close(LWb);
 		}
-		if (ext == 2) {
+		if (index == 2) {
 			if (fopen_s(&record, pathfile.c_str(), "w") != 0) {
 				MessageBox(0, L"Erro ao exportar o arquivo.", L"Erro", MB_OK | MB_ICONERROR);
-				return errno;
+				return errno; 
 			}
 			lvi.mask = LVIF_TEXT;
 			lvi.pszText = (wchar_t*)calloc(20, sizeof(wchar_t));
@@ -80,6 +83,7 @@ int SaveFile(string pathfile, HWND& lv, int type) {
 	FileData fd;
 	FILE* record;
 	LVITEM lvi;
+	ZeroMemory(&lvi, sizeof(LVITEM));
 	int qtLb = SendMessage(lv, LVM_GETITEMCOUNT, 0, 0);
 	fh.ID[0] = 'L'; fh.ID[1] = 'S'; fh.ID[2] = 'U';
 	fh.type = (char)type;
@@ -124,18 +128,17 @@ int PutDataInLV(string str, HWND& lv) {
 	LVITEM lvi;
 	ZeroMemory(&lvi, sizeof(LVITEM));
 	if (fopen_s(&file, str.c_str(), "rb")!=0) {
-		MessageBox(0, L"Erro ao abrir o arquivo.",L"Erro",MB_OK);
+		MessageBox(0, L"Erro ao abrir o arquivo.",L"Erro",MB_OK|MB_ICONERROR);
 		return errno;
 	}
 
 	fread(&fh, sizeof(FileHeader), 1, file);
 	if (fh.ID[0] != 'L' || fh.ID[1] != 'S' || fh.ID[2] != 'U') {
-		MessageBox(0, L"Arquivo invalido ou corrompido.", L"Erro", MB_OK);
+		MessageBox(0, L"Arquivo invalido ou corrompido.", L"Erro", MB_OK|MB_ICONERROR);
 		return -3;
 	}  
 	size_t read =0;
 	FileData* fd = (FileData*)malloc(sizeof(FileData) * fh.nblocks);
-	WCHAR* wstr = (WCHAR*)malloc(sizeof(WCHAR) * 20);
 	do {
 		read+=fread(fd, sizeof(FileData), fh.nblocks, file);
 	} while (!feof(file));
@@ -143,7 +146,7 @@ int PutDataInLV(string str, HWND& lv) {
 		MessageBox(0, L"Arquivo incompleto.", L"Erro", MB_OK);
 		return -2;			
 	}
-	wchar_t ptfformat[5];
+	wchar_t ptfformat[5],wstr[20];
 	switch (fh.type) {
 	case FLOAT_32BITS:
 		lstrcpyW(ptfformat, L"%f");
@@ -152,7 +155,7 @@ int PutDataInLV(string str, HWND& lv) {
 		lstrcpyW(ptfformat, L"%d");
 		break;
 	default:
-		MessageBox(0, L"Formato nao reconhecido.", L"Erro", MB_OK);
+		MessageBox(0, L"Formato nao reconhecido.", L"Erro", MB_OK|MB_ICONERROR);
 		return -1;			
 
 	}
@@ -166,7 +169,6 @@ int PutDataInLV(string str, HWND& lv) {
 		wsprintf(wstr, L"%d", fd[i].mtime);
 		ListView_SetItemText(lv, i,1,wstr);
 	}
-	free(wstr);
 	free(fd);
 	fclose(file);
 	return 0;

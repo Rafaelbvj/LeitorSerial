@@ -16,42 +16,36 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_ int       nCmdShow)
 {
 
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-
 	InitCommonControls();
 	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadStringW(hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
 	WNDCLASSEXW wcex;
-
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WndProc;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
-	wcex.hIcon = static_cast<HICON>(::LoadImage(hInstance,
-		MAKEINTRESOURCE(IDI_WINDOWSPROJECT1),
-		IMAGE_ICON,
-		0, 0,
-		LR_DEFAULTCOLOR | LR_DEFAULTSIZE));
+	wcex.hIcon = static_cast<HICON>(::LoadImage(hInstance,MAKEINTRESOURCE(IDI_WINDOWSPROJECT1),
+												IMAGE_ICON,
+												0, 0,
+												LR_DEFAULTCOLOR | LR_DEFAULTSIZE));
 	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_WINDOWSPROJECT1);
 	wcex.lpszClassName = szWindowClass;
-	wcex.hIconSm = static_cast<HICON>(::LoadImage(hInstance,
-		MAKEINTRESOURCE(IDI_WINDOWSPROJECT1),
-		IMAGE_ICON,
-		0, 0,
-		LR_DEFAULTCOLOR | LR_DEFAULTSIZE));
+	wcex.hIconSm = static_cast<HICON>(::LoadImage(hInstance,MAKEINTRESOURCE(IDI_WINDOWSPROJECT1),
+												  IMAGE_ICON,
+												  0, 0,
+												  LR_DEFAULTCOLOR | LR_DEFAULTSIZE));
 	RegisterClassExW(&wcex);
-
-	HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX,
-		CW_USEDEFAULT, 0, 650, 700, nullptr, nullptr, hInstance, nullptr);
-
+	HWND hWnd = CreateWindowW(szWindowClass, szTitle, 
+							 WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX,
+							 CW_USEDEFAULT, CW_USEDEFAULT, 
+							 650, 700, 
+							 nullptr, nullptr, hInstance, nullptr);
 	ShowWindow(hWnd, nCmdShow);
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWSPROJECT1));
-
 	MSG msg;
 	BOOL bExit = TRUE;
 	while (bExit)
@@ -59,18 +53,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			if (msg.message == WM_QUIT) {
-
 				bExit = FALSE;
 			}
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-
-
-
 	}
-
-
 	return (int)msg.wParam;
 }
 
@@ -104,8 +92,8 @@ DataProtocol dp;
 WCHAR  wbuffer[50];
 
 //State vars
-BOOL bRunning = FALSE;
-int tensaoType = INT_32BITS;
+atomic <bool> bRunning = FALSE;
+atomic <int>  tensaoType = INT_32BITS;
 
 //Default sets
 char localfile[100] = { "teste.lsu" };
@@ -306,7 +294,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				/*******************************/
 			}
 			else {
-				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') { //End of communication sign
+				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') { //End of communication signature
 					break;
 				}
 				MessageBox((HWND)lp, ErrorSync, L"Erro", MB_OK | MB_ICONERROR);
@@ -447,6 +435,7 @@ void ComponentG(HWND h, HINSTANCE hi)
 	SendMessage(chk3, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(chk4, WM_SETFONT, (WPARAM)sysFont, 0);
 	SendMessage(edt2, WM_SETFONT, (WPARAM)sysFont, 0);
+	
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -514,7 +503,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 							sprintf_s(ofn.lpstrFile, MAX_PATH, "%s.txt", ofn.lpstrFile);
 						}
 					}
-					ExportFile(ofn.lpstrFile, lv, ofn.nFileExtension, tensaoType);
+					ExportFile(ofn.lpstrFile, lv, ofn.nFilterIndex, tensaoType);
 					
 					//It occurs when attempt to connect without saving the list first, so the listview must be cleared after saving it.
 					if (lParam == 1) { 
