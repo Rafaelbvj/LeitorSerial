@@ -1,17 +1,28 @@
 #pragma once
-WCHAR ErrorCreateEvent[] = L"Erro CreateEvent.";
-WCHAR ErrorGetOverlappedResult[] = L"Erro GetOverlappedResult.";
-WCHAR ErrorWriteFile[] = L"Erro WriteFile.";
-WCHAR InfoTimeLimit[] = L"Tempo de amostragem não definido ou invalido, por padrao a duraçao é de 60 segundos.";
-WCHAR WarningGnuRunning[] = L"A ultima instância do GNUPlot sera fechada.";
-WCHAR ErrorGnuPlotNotFound[] = L"Erro ao iniciar GNUPlot. Verifique o caminho do executável ou se o programa foi instalado.";
-WCHAR WarningScriptNotLoad[] = L"Não foi possível carregar o script.";
-WCHAR ErrorTimeOut[] = L"Conexao expirou!";
-WCHAR ErrorWaitForSingleObject[] = L"Erro WaitForSingleObject";
-WCHAR ErrorWaitCommEvent[] = L"Erro WaitCommEvent";
-WCHAR ErrorSync[] = L"Erro de sincronização, tente novamente.";
-WCHAR WarningProgramExit[] = L"O programa está em execução. Tem certeza que deseja sair?";
-WCHAR ErrorReadFileTimeOut[] = L"Conexao expirou durante leitura. Pode ser que o arduino tenha terminado inesperadamente.";
-WCHAR ErrorFileOpen[] = L"Erro ao salvar o arquivo.";
-WCHAR ErrorSerialConnection[] = L"Erro ao conectar a porta serial.";
-WCHAR WarningSaveFile[] = L"Os dados da tabela serão apagados, deseja salvá-los?";
+// Error List PT-BR
+#define ErrorTitle L"Erro"
+#define WarningTitle L"Warning"
+#define InfoTitle	 L"Info"
+
+#define ErrorFormat L"Formato nao reconhecido."
+#define ErrorIncomplete L"Arquivo incompleto."
+#define ErrorCorrupted L"Arquivo invalido ou corrompido."
+#define ErrorOpenFile L"Erro ao abrir o arquivo."
+#define ErrorCreateFile L"Erro ao criar o arquivo."
+#define ErrorExportFile L"Erro ao exportar o arquivo."
+#define ErrorCreateEvent L"Erro CreateEvent."
+#define ErrorGetOverlappedResult L"Erro GetOverlappedResult."
+#define ErrorWriteFile L"Erro WriteFile."
+#define InfoTimeLimit L"Tempo de amostragem não definido ou invalido, por padrao a duraçao é de 60 segundos."
+#define WarningGnuRunning L"A ultima instância do GNUPlot sera fechada."
+#define ErrorGnuPlotNotFound L"Erro ao iniciar GNUPlot. Verifique o caminho do executável ou se o programa foi instalado."
+#define WarningScriptNotLoad L"Não foi possível carregar o script."
+#define ErrorTimeOut L"Conexao expirou!"
+#define ErrorWaitForSingleObject L"Erro WaitForSingleObject"
+#define ErrorWaitCommEvent L"Erro WaitCommEvent"
+#define ErrorSync L"Erro de sincronização, tente novamente."
+#define WarningProgramExit L"O programa está em execução. Tem certeza que deseja sair?"
+#define ErrorReadFileTimeOut L"Conexao expirou durante leitura. Pode ser que o arduino tenha terminado inesperadamente."
+#define ErrorFileOpen L"Erro ao salvar o arquivo."
+#define ErrorSerialConnection L"Erro ao conectar a porta serial."
+#define WarningSaveFile L"Os dados da tabela serão apagados, deseja salvá-los?"

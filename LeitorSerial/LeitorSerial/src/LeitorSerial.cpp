@@ -126,7 +126,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	SendMessage(edt2, WM_GETTEXT, sizeof(wbuffer), (LPARAM)wbuffer);
 	dc.msegs = wcstol(wbuffer, 0, 10) * 1000;
 	if (dc.msegs == 0) {
-		MessageBox((HWND)lp, InfoTimeLimit, L"Info", MB_OK | MB_ICONINFORMATION);
+		MessageBox((HWND)lp, InfoTimeLimit, InfoTitle, MB_OK | MB_ICONINFORMATION);
 		dc.msegs = 60000;
 	}
 	if (SendMessage(chk2, BM_GETCHECK, 0, 0) == BST_CHECKED) {
@@ -138,12 +138,12 @@ DWORD WINAPI Thread(LPVOID lp) {
 		if (GetLastError() == ERROR_IO_PENDING) {
 			if (GetOverlappedResult(commPort, &olw, &writeBytes, TRUE) == FALSE) {
 
-				MessageBox(0, ErrorGetOverlappedResult, L"Erro", MB_ICONERROR | MB_OK);
+				MessageBox(0, ErrorGetOverlappedResult, ErrorTitle, MB_ICONERROR | MB_OK);
 				return -2;
 			}
 		}
 		else {
-			MessageBox(0, ErrorWriteFile, L"Erro", MB_ICONERROR | MB_OK);
+			MessageBox(0, ErrorWriteFile, ErrorTitle, MB_ICONERROR | MB_OK);
 			return -2;
 		}
 	}
@@ -193,11 +193,11 @@ DWORD WINAPI Thread(LPVOID lp) {
 	if (SendMessage(chk3, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		PlotEnable = TRUE;
 		if (graph.IsGNUPlotRunning()) {
-			MessageBox((HWND)lp, WarningGnuRunning, L"Aviso", MB_OK | MB_ICONWARNING);
+			MessageBox((HWND)lp, WarningGnuRunning, WarningTitle, MB_OK | MB_ICONWARNING);
 			graph.FinishGNUPlotProgram();
 		}
 		if (!graph.StartGNUPlotProgram()) {
-			MessageBox((HWND)lp, ErrorGnuPlotNotFound, L"Erro", MB_OK | MB_ICONERROR);
+			MessageBox((HWND)lp, ErrorGnuPlotNotFound, ErrorTitle, MB_OK | MB_ICONERROR);
 			PlotEnable = FALSE;
 		}
 		else {
@@ -205,7 +205,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 			/******************Plot Configuration*********************/
 			//Setting plot features		
 			if (!graph.GNUScript(scripttoload)) {
-				MessageBox((HWND)lp, WarningScriptNotLoad, L"Aviso", MB_OK | MB_ICONWARNING);
+				MessageBox((HWND)lp, WarningScriptNotLoad, WarningTitle, MB_OK | MB_ICONWARNING);
 			}
 			/*********************************************************/
 			fclose(_fsopen("tmpplot", "w", SH_DENYNO));
@@ -225,7 +225,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 			if (GetLastError() == ERROR_IO_PENDING) {
 				status = WaitForSingleObject(olr.hEvent, 5000);		//Waits until 5 seconds
 				if (status == WAIT_TIMEOUT) {
-					MessageBox((HWND)lp, ErrorTimeOut, L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox((HWND)lp, ErrorTimeOut, ErrorTitle, MB_OK | MB_ICONERROR);
 					if (graph.IsGNUPlotRunning()) {
 						graph.FinishGNUPlotProgram();
 					}
@@ -233,14 +233,14 @@ DWORD WINAPI Thread(LPVOID lp) {
 				}
 				if (status == WAIT_FAILED) {
 
-					MessageBox((HWND)lp, ErrorWaitForSingleObject, L"Erro", MB_ICONERROR);
+					MessageBox((HWND)lp, ErrorWaitForSingleObject, ErrorTitle, MB_ICONERROR);
 					break;
 				}
 
 			}
 			else {
 
-				MessageBox((HWND)lp, ErrorWaitCommEvent, L"Erro", MB_ICONERROR);
+				MessageBox((HWND)lp, ErrorWaitCommEvent, ErrorTitle, MB_ICONERROR);
 				COMSTAT cs;
 				ClearCommError(commPort, &readBytes, &cs);
 				break;
@@ -253,7 +253,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				GetOverlappedResult(commPort, &olr, &readBytes, FALSE);
 				status = WaitForSingleObject(olr.hEvent, 3000);		 //Waits until 3 seconds
 				if (status == WAIT_TIMEOUT) {
-					MessageBox((HWND)lp, ErrorReadFileTimeOut, L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox((HWND)lp, ErrorReadFileTimeOut, ErrorTitle, MB_OK | MB_ICONERROR);
 					break;
 				}
 			}
@@ -297,7 +297,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 				if (dp.signbegin[0] == 'E' && dp.signend[0] == 'D') { //End of communication signature
 					break;
 				}
-				MessageBox((HWND)lp, ErrorSync, L"Erro", MB_OK | MB_ICONERROR);
+				MessageBox((HWND)lp, ErrorSync, ErrorTitle, MB_OK | MB_ICONERROR);
 				if (graph.IsGNUPlotRunning()) {
 					graph.FinishGNUPlotProgram();
 				}
@@ -580,7 +580,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			if (wParam == CONECTAR_BUTTON) {
 				if (ListView_GetItemCount(lv) > 0) {
-					if (MessageBox(hWnd, WarningSaveFile, L"Aviso", MB_YESNO | MB_ICONWARNING) == IDNO) {
+					if (MessageBox(hWnd, WarningSaveFile, WarningTitle, MB_YESNO | MB_ICONWARNING) == IDNO) {
 						memset(wbuffer, 0, sizeof(wbuffer));
 						ListView_DeleteAllItems(lv);
 						InvalidateRect(hWnd, 0, TRUE);
@@ -596,7 +596,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SendMessage(cbPort, CB_GETLBTEXT, nCursel, (LPARAM)selectedPort);
 				commPort = CreateFile(selectedPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 				if (commPort == INVALID_HANDLE_VALUE) {
-					MessageBox(0, ErrorSerialConnection, L"Erro", MB_OK | MB_ICONERROR);
+					MessageBox(0, ErrorSerialConnection, ErrorTitle, MB_OK | MB_ICONERROR);
 
 				}
 				else {
@@ -681,7 +681,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CLOSE:
 	{
 		if (bRunning) {
-			if (MessageBox(hWnd, WarningProgramExit, L"Aviso", MB_YESNO | MB_ICONEXCLAMATION) == IDNO) {
+			if (MessageBox(hWnd, WarningProgramExit, WarningTitle, MB_YESNO | MB_ICONEXCLAMATION) == IDNO) {
 				return 0;
 			}
 			bRunning = FALSE;

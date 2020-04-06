@@ -13,7 +13,7 @@ int ExportFile(string pathfile, HWND& lv,int index, int type) {
 		if (index == 1) {
 			LWb = workbook_new(pathfile.c_str());
 			if (LWb == NULL) {
-				MessageBox(0, L"Erro ao exportar o arquivo.", L"Erro", MB_OK | MB_ICONERROR);
+				MessageBox(0, ErrorExportFile, ErrorTitle, MB_OK | MB_ICONERROR);
 				return -1;
 			}
 			LWs = workbook_add_worksheet(LWb, "Leitor Serial");
@@ -45,7 +45,7 @@ int ExportFile(string pathfile, HWND& lv,int index, int type) {
 		}
 		if (index == 2) {
 			if (fopen_s(&record, pathfile.c_str(), "w") != 0) {
-				MessageBox(0, L"Erro ao exportar o arquivo.", L"Erro", MB_OK | MB_ICONERROR);
+				MessageBox(0, ErrorExportFile, ErrorTitle, MB_OK | MB_ICONERROR);
 				return errno; 
 			}
 			lvi.mask = LVIF_TEXT;
@@ -90,7 +90,7 @@ int SaveFile(string pathfile, HWND& lv, int type) {
 	fh.nblocks = qtLb;
 	if (qtLb > 0) {
 		if (fopen_s(&record, pathfile.c_str(), "wb") != 0) {
-			MessageBox(0, L"Erro ao criar o arquivo.", L"Erro", MB_OK);
+			MessageBox(0, ErrorCreateFile, ErrorTitle, MB_OK);
 			return errno;
 		}
 		fwrite(&fh, sizeof(FileHeader), 1, record);
@@ -128,13 +128,13 @@ int PutDataInLV(string str, HWND& lv) {
 	LVITEM lvi;
 	ZeroMemory(&lvi, sizeof(LVITEM));
 	if (fopen_s(&file, str.c_str(), "rb")!=0) {
-		MessageBox(0, L"Erro ao abrir o arquivo.",L"Erro",MB_OK|MB_ICONERROR);
+		MessageBox(0, ErrorOpenFile,ErrorTitle,MB_OK|MB_ICONERROR);
 		return errno;
 	}
 
 	fread(&fh, sizeof(FileHeader), 1, file);
 	if (fh.ID[0] != 'L' || fh.ID[1] != 'S' || fh.ID[2] != 'U') {
-		MessageBox(0, L"Arquivo invalido ou corrompido.", L"Erro", MB_OK|MB_ICONERROR);
+		MessageBox(0, ErrorCorrupted, ErrorTitle, MB_OK|MB_ICONERROR);
 		return -3;
 	}  
 	size_t read =0;
@@ -143,7 +143,7 @@ int PutDataInLV(string str, HWND& lv) {
 		read+=fread(fd, sizeof(FileData), fh.nblocks, file);
 	} while (!feof(file));
 	if (read < fh.nblocks) {
-		MessageBox(0, L"Arquivo incompleto.", L"Erro", MB_OK);
+		MessageBox(0, ErrorIncomplete, ErrorTitle, MB_OK);
 		return -2;			
 	}
 	wchar_t ptfformat[5],wstr[20];
@@ -155,7 +155,7 @@ int PutDataInLV(string str, HWND& lv) {
 		lstrcpyW(ptfformat, L"%d");
 		break;
 	default:
-		MessageBox(0, L"Formato nao reconhecido.", L"Erro", MB_OK|MB_ICONERROR);
+		MessageBox(0, ErrorFormat, ErrorTitle, MB_OK|MB_ICONERROR);
 		return -1;			
 
 	}

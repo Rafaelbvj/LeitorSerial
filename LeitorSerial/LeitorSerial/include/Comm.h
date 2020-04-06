@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <xlsxwriter.h>
-
+#include "ErrorList.h"
 #define FLOAT_32BITS	  1
 #define INT_32BITS		  0
 using namespace std;
