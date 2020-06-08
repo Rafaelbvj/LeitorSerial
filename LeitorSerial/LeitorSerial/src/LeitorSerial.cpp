@@ -80,7 +80,7 @@ HWND rd, rd2, rd3, chk1, chk2, chk3, chk4;		//Buttons
 HWND st, st1, st2, st3, st4, st5;				//Statics
 HWND lv;										//ListViews
 //Plot vars
-auto& graph = Graficos::GetInstanceGNUPlot();
+Graficos graph;
 
 //Communication vars
 COMMPORTS cp;
@@ -164,7 +164,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 	}
 	if (SendMessage(chk4, BM_GETCHECK, 0, 0) == BST_CHECKED) {
 		tensaoType = FLOAT_32BITS;
-		fct = (double)dc.ganho / (2 ^ 23);
+		fct = (double)dc.ganho / pow(2 , 23);
 		nPrec = SendMessage(cbPrec, CB_GETCURSEL, 0, 0);
 	}
 	WCHAR ptfb[10];
@@ -175,7 +175,7 @@ DWORD WINAPI Thread(LPVOID lp) {
 		strcpy_s(ptff, "%d %.0f\n");
 		break;
 	case 1:
-		lstrcpyW(ptfb, L"%.1lf");
+		lstrcpyW(ptfb, L"%.1f");
 		strcpy_s(ptff, "%d %.1f\n");
 		break;
 	case 2:
@@ -258,20 +258,21 @@ DWORD WINAPI Thread(LPVOID lp) {
 				}
 			}
 			if (dp.signbegin[0] == 'B' && dp.signend[0] == 'E') {	 //Data signature
+
 				calcVolts = fct * dp.dt;
-				swprintf_s(wbuffer, sizeof(wbuffer), ptfb, calcVolts);
+
+				//Add 'Tempo' column a new item
+				wsprintf(wbuffer, L"%d", dp.mtime);
+				ListView_SetItemText(lv, e, 1, wbuffer);
 
 				//Add 'Sinal' column a new item
+				swprintf_s(wbuffer, sizeof(wbuffer), ptfb, calcVolts);
 				ZeroMemory(&lvi, sizeof(LVITEM));
 				lvi.mask = LVIF_TEXT;
 				lvi.pszText = wbuffer;
 				lvi.iItem = e;
 				lvi.cchTextMax = wcslen(wbuffer);
 				ListView_InsertItem(lv, &lvi);
-
-				//Add 'Tempo' column a new item
-				wsprintf(wbuffer, L"%d", dp.mtime);
-				ListView_SetItemText(lv, e, 1, wbuffer);
 
 				/******Update plot file********/
 				if (PlotEnable) {
@@ -686,10 +687,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			bRunning = FALSE;
 		}
-		if (graph.IsGNUPlotRunning()) {
-			graph.FinishGNUPlotProgram();
+		if (WaitForSingleObject(hThread, 0) == WAIT_OBJECT_0) {
+			TerminateThread(hThread, 0);
 		}
-		TerminateThread(hThread, 0);
+		graph.FinishGNUPlotProgram();
+		
 		DestroyWindow(hWnd);
 	}
 	break;

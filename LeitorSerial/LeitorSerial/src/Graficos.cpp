@@ -1,20 +1,14 @@
 
 #include "Graficos.h"
-Graficos* Graficos::gr = 0;
-Graficos& Graficos::GetInstanceGNUPlot() {
-	if (gr == 0) {
-		gr = new Graficos;
-	}
-	return *gr;
-}
 
-int Graficos::GNUScript(string const& str) {
+int Graficos::GNUScript(string str) {
 	if(fileExist(str)<0 || !IsGNUPlotRunning()) {
 		return false;
 	}
-	return CmdLine("load '"+str+"'\n");
+	string res = "load '" + str + "'\n";
+	return CmdLine(res);
 }
-bool Graficos::StartGNUPlotProgram(string const& strcmd) {
+bool Graficos::StartGNUPlotProgram(string strcmd) {
 	GnuFilePath.append(strcmd);
 	return StartGNUPlotProgram();
 }
@@ -29,11 +23,12 @@ bool Graficos::StartGNUPlotProgram() {
 	if (!CreateProcessA(GnuFilePath.c_str(), 0, 0, 0, TRUE, CREATE_NO_WINDOW, 0, CurrentDirectory, &st, &pi)) {
 		return false;
 	}
+	startgnu = TRUE;
 	return true;
 }
 
 
-Graficos::Graficos() {
+Graficos::Graficos() :startgnu{ FALSE } {
 	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 	ZeroMemory(&st, sizeof(STARTUPINFO));
 	ZeroMemory(&sat, sizeof(SECURITY_ATTRIBUTES));
@@ -49,6 +44,55 @@ Graficos::Graficos() {
 	free(CurrentDirectory);
 	CurrentDirectory = (char*)malloc(sizeof(char) * MAX_PATH);
 	GetCurrentDirectoryA(MAX_PATH, CurrentDirectory);
+}
+
+int Graficos::SetGnuFilePath(string pf) {
+	if (pf.empty()) {
+		return -1;
+	}
+	if (fileExist(pf) != 1) {
+		return -2;
+	}
+
+	GnuFilePath = pf;
+	return 1;
+}
+
+bool Graficos::IsGNUPlotRunning() {
+	return startgnu;
+}
+int Graficos::fileExist(string path) {
+	if (!fopen_s(&script, path.c_str(), "r")) {		//Success
+		fclose(script);
+		return 1;
+	}
+	switch (errno) {
+	case EACCES:
+		return -1;		//it might exists but it can't be opened
+	case ENOENT:
+		return -2;		//no file found
+	}
+	return 0;
+}
+int Graficos::CmdLine(string strcmd) {
+	if (strcmd.empty()) {
+		return 0;
+	}
+	if (!WriteFile(hWritePipe, strcmd.c_str(), strcmd.size(), &written, 0)) {
+		return 0;
+	}
+
+	return written;
+}
+
+void Graficos::FinishGNUPlotProgram() {
+	if (startgnu) {
+		TerminateThread(pi.hThread, 0);
+		TerminateProcess(pi.hProcess, 0);
+		CloseHandle(hWritePipe);
+		CloseHandle(hReadPipe);
+	}
+	startgnu = FALSE;
 }
 Graficos::~Graficos() {
 	free(CurrentDirectory);
