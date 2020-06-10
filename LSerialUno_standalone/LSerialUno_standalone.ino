@@ -78,9 +78,9 @@ class Menu {
       buff[crs]  = txt;
       crs++;
     }
-    unsigned long ShowVolume(LiquidCrystal_I2C &lcd, unsigned long range_min, unsigned long range_max, int x, int y, unsigned long p) {
+    unsigned long ShowVolume(LiquidCrystal_I2C &lcd, unsigned long range_max, int x, int y, unsigned long p) {
       lcd.setCursor(x, y);
-      unsigned long k = range_min + ((range_max - range_min) * p) / 1024L;
+      unsigned long k = (range_max * p) / 1024L;
       lcd.print(k);
       return k;
     }
@@ -88,12 +88,11 @@ class Menu {
       lcd.clear();
       unsigned long b = opt_pot * crs / 1024L;
       float c = opt_pot * crs / 1024.0f;
-      if ( b == s_buff) {
-        b--;
+      if (b == s_buff - 1) {
+        b --;
       }
       lcd.setCursor(0, 0);
       lcd.print(buff[b]);
-
       lcd.setCursor(0, 1);
       lcd.print(buff[b + 1]);
 
@@ -120,7 +119,7 @@ bool Escolher_Ganho(LiquidCrystal_I2C &lcd, Menu &menu, int &gain) {
     pot = analogRead(0);
     lcd.clear();
     lcd.print("Ganho:");
-    gain = menu.ShowVolume(lcd, 1, 4, 7, 0, pot);
+    gain = menu.ShowVolume(lcd, 3, 7, 0, pot);
     if (rcv == 'c') {
       return true;
     }
@@ -137,10 +136,10 @@ bool Escolher_Duracao(LiquidCrystal_I2C &lcd, Menu &menu, unsigned long &hour, u
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Duracao:");
-    hour = menu.ShowVolume(lcd, 0, 101, 10, 0, pot);
+    hour = menu.ShowVolume(lcd, 101, 10, 0, pot);
     lcd.setCursor(14, 0);
     lcd.print("h");
-    minute = menu.ShowVolume(lcd, 0, 60, 10, 1, pot);
+    minute = menu.ShowVolume(lcd, 60, 10, 1, pot);
     lcd.setCursor(13, 1);
     lcd.print("min");
     delay(100);
@@ -165,13 +164,10 @@ void setup() {
   lcd.begin(16, 2);
   menu.AddOption("(1) Gravar");
   menu.AddOption("(2) Leitura");
-  menu.AddOption("(3) Tarar");
-  menu.AddOption("(4) Sobre");
+  menu.AddOption("(3) Sobre");
 }
 
 unsigned long pot, pot2;
-long int tara[3] = {0, 0, 0};                       //Tara para cada ganho  
-
 int selected;
 void loop() {
   pot = analogRead(0);
@@ -179,7 +175,7 @@ void loop() {
   if (Serial.available() > 0) {
     byte rcv = Serial.read();
     if (rcv == 'c') {       //Substituir por botao
-      if (selected == 3) {                        //Sobre
+      if (selected == 2) {                        //Sobre
         while (rcv != 'e') {
           rcv = Serial.read();
           lcd.clear();
@@ -192,49 +188,35 @@ void loop() {
       else {
         int ganho;
         if (Escolher_Ganho(lcd, menu, ganho)) {
-          if (selected == 2) {                    //Tarar
-            while(true){
-            if (adc.GetSignalNumber(ganho, tara[ganho - 1])) {
-              Serial.println(tara[ganho - 1]);
-              Serial.println(ganho);
-              break;
-            }
-            }
-          }
+          
           if (selected == 1) {                    //Leitura
             long int res;
             while (rcv != 'e') {
               rcv = Serial.read();
               if (adc.GetSignalNumber(ganho, res)) {
                 lcd.clear();
-                lcd.print(res - tara [ganho - 1]);
-                lcd.setCursor(13, 0);
-                lcd.print("bit");
-                Serial.print(tara[ganho - 1]);
-                Serial.print(" ");
-                Serial.println(res);
+                lcd.print(res);
+                lcd.setCursor(9, 0);
+                lcd.print("Digital");
               }
             }
           }
-
+          
           if (selected == 0) {                    //Gravar
-            unsigned long hour, minute;
-            if (Escolher_Duracao(lcd, menu, hour, minute)) {
-              Serial.println(hour);
-              Serial.println(minute);
-
-
+            unsigned long hour,minute;
+            if (Escolher_Duracao(lcd, menu,hour,minute)){
+                Serial.println(hour);
+                Serial.println(minute);
+                  
+              
             }
           }
-
-
-        }
-
       }
     }
-
-
   }
-  delay(100);
+
+
+}
+delay(100);
 
 }
