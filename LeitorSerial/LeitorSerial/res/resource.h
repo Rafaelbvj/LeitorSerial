@@ -2,13 +2,6 @@
 // Arquivo de inclusão gerado pelo Microsoft Visual C++.
 // Usado por LeitorSerial.rc
 //
-#define PLOT_CHECKBUTTON				1445
-#define TENSAO_CHECKBUTTON              1478
-#define MICROSD_CHECKBUTTON				1444
-#define CONECTAR_BUTTON					1404
-#define INICIAR_BUTTON					1405
-#define DESCONECTAR_BUTTON				1406
-
 #define IDC_MYICON                      2
 #define IDD_FORMVIEW                    101
 #define IDD_WINDOWSPROJECT1_DIALOG      102
@@ -28,6 +21,15 @@
 #define IDC_SCRIPT                      1005
 #define IDC_COMBO1                      1006
 #define IDC_GNUFILE                     1007
+#define IDC_EDIT3                       1008
+#define IDC_BUTTON3                     1009
+#define CONECTAR_BUTTON                 1404
+#define INICIAR_BUTTON                  1405
+#define DESCONECTAR_BUTTON              1406
+#define MICROSD_CHECKBUTTON             1444
+#define PLOT_CHECKBUTTON                1445
+#define PROGRESS_BAR                    1450
+#define TENSAO_CHECKBUTTON              1478
 #define ID_ARQUIVO                      32771
 #define ID_FONTE                        32776
 #define ID_FERRAMENTAS_PORTAS           32777
@@ -46,7 +48,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32788
-#define _APS_NEXT_CONTROL_VALUE         1008
+#define _APS_NEXT_CONTROL_VALUE         1010
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

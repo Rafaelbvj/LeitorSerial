@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <commdlg.h>
 #include <CommCtrl.h>
+#include <Dbt.h>
 // Arquivos de Cabeçalho C RunTime
 #include <stdio.h>
 #include <stdlib.h>

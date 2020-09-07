@@ -8,7 +8,6 @@ typedef struct dataconf {
   unsigned long int msegs;
   unsigned long int prec;
   unsigned long int ganho;
-  char localfile[100];
 } DataConf;
 typedef struct data {
   unsigned char signbegin[4];
@@ -63,9 +62,9 @@ class ADCHX711 {
         if (digitalRead(dout_hx) == HIGH) {
           kp = data[0];                                             //Salva o byte mais significativo dos dados
           if (kp >> 7 == 1) {                                       //Verifica se o sinal e negativo comparando o MSB == 1
-            res = (uint32_t)0xFF << 24;                             //Se for negativo o byte mais significativo do resultado e preenchido por 1's em binario (ver complemento para 2)
+            res = (uint32_t)0xFF << 24;                             //Se for negativo o byte mais significativo do resultado (4 bytes) e preenchido por 1's em binario (ver complemento para 2)
           }
-          res |= (uint32_t)data[0] << 16 | (uint32_t)data[1] << 8 | (uint32_t)data[2]; 
+          res |= (uint32_t)data[0] << 16 | (uint32_t)data[1] << 8 | (uint32_t)data[2];      //concatena os 3 bytes de dados
           return true;         
         }
         
@@ -83,12 +82,10 @@ void setup() {
   adc.TurnOn();
 }
 
-File file;
 DataConf dc;
 DataProtocol dp;
-char br[120];
+char br[50];
 int i = 0 ;
-bool WriteSD = false;
 unsigned long clock_st, clock_end;
 
 void loop() {
@@ -98,12 +95,6 @@ void loop() {
     i++;
     if (i == sizeof(DataConf)) {
       memcpy(&dc, br, sizeof(DataConf));
-      if (dc.localfile[0] != '\0' ) {                 //checks file location
-        if (SD.begin()) {
-        file = SD.open(dc.localfile, FILE_WRITE);
-        WriteSD = true;
-        }
-      }
       dp.signbegin[0] = 'B';        //Data signature
       dp.signend[0] = 'E';          //Data signature
       clock_st = millis();
@@ -112,21 +103,12 @@ void loop() {
         if (adc.GetSignalNumber(dc.ganho, resultado)) {
           dp.mtime = clock_end-clock_st;
           dp.dt = resultado;
-          if (WriteSD) {
-            file.print(dp.mtime);
-            file.print(" ");
-            file.println(dp.dt);
-            continue;                               //Test whether its performance is okay or not
-          }
           Serial.write((byte*)&dp, sizeof(DataProtocol));
         }
       }
       dp.signbegin[0] = 'E';                         
       dp.signend[0] = 'D';
       Serial.write((byte*)&dp,sizeof(DataProtocol));//Finishing communication
-      if (WriteSD) {
-        file.close();
-      }
     }
   }
 }

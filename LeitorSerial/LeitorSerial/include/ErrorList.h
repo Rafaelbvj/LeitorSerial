@@ -4,6 +4,7 @@
 #define WarningTitle L"Warning"
 #define InfoTitle	 L"Info"
 
+#define ErrorThread L"Erro CreateThread"
 #define ErrorFormat L"Formato nao reconhecido."
 #define ErrorIncomplete L"Arquivo incompleto."
 #define ErrorCorrupted L"Arquivo invalido ou corrompido."
@@ -26,3 +27,4 @@
 #define ErrorFileOpen L"Erro ao salvar o arquivo."
 #define ErrorSerialConnection L"Erro ao conectar a porta serial."
 #define WarningSaveFile L"Os dados da tabela serão apagados, deseja salvá-los?"
+#define FinishedReading L"Terminado!"

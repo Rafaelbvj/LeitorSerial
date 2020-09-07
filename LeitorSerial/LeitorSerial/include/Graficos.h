@@ -1,7 +1,6 @@
 #pragma once
 #include <Windows.h>
 #include <string>
-using namespace std;
 
 class Graficos {
 private:
@@ -13,19 +12,20 @@ private:
 	DWORD written;
 	BOOL startgnu;
 	FILE* script;
-	string op;
-	string GnuFilePath;
+	std::string op;
+	std::string GnuFilePath;
 	char* CurrentDirectory;
-	int fileExist(string );
+	int fileExist(std::string&);
 public:
 	Graficos();
 	bool StartGNUPlotProgram();
-	bool StartGNUPlotProgram(string);                      //Must be called first   
-	int CmdLine(string);
-	int SetGnuFilePath(string);
+	bool StartGNUPlotProgram(std::string&);                      //Must be called first   
+	int CmdLine(std::string);
+	int SetGnuFilePath(std::string);
+	std::string GetGnuFilePath() const;
 	void FinishGNUPlotProgram();
 	bool IsGNUPlotRunning();
-	int GNUScript(string);
+	int GNUScript(std::string&);
 	~Graficos();
 
 };

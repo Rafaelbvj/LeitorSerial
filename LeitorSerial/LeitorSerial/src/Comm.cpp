@@ -20,10 +20,11 @@ int ExportFile(string pathfile, HWND& lv,int index, int type) {
 			LF = workbook_add_format(LWb);
 			format_set_font_name(LF, "Arial");
 			lvi.mask = LVIF_TEXT;
-			lvi.pszText = (wchar_t*)malloc(20);
-			lvi.cchTextMax = 20;
+			lvi.pszText = (wchar_t*)malloc(50);
+			lvi.cchTextMax = 50;
+			long col = 0;
 			double c = 0;
-			for (lxw_col_t i = 0; i < qtLb; i++) {
+			for (long i = qtLb-1; i >= 0; --i) {
 				lvi.iSubItem = 0;
 				lvi.iItem = i;
 				ListView_GetItem(lv, &lvi);
@@ -35,11 +36,12 @@ int ExportFile(string pathfile, HWND& lv,int index, int type) {
 					c = wcstold(lvi.pszText, 0);
 					break;
 				}
-				worksheet_write_number(LWs, i, 0, c, LF);
+				worksheet_write_number(LWs, qtLb-i, col, c, LF);
+				lvi.iItem = i;
 				lvi.iSubItem = 1;
 				ListView_GetItem(lv, &lvi);
 				c = wcstol(lvi.pszText, 0, 10);
-				worksheet_write_number(LWs, i, 1, c, LF);
+				worksheet_write_number(LWs, qtLb-i, col+1, c, LF);
 			}
 			workbook_close(LWb);
 		}
@@ -51,10 +53,10 @@ int ExportFile(string pathfile, HWND& lv,int index, int type) {
 			lvi.mask = LVIF_TEXT;
 			lvi.pszText = (wchar_t*)calloc(20, sizeof(wchar_t));
 			lvi.cchTextMax = 20;
+			lvi.iItem = qtLb-1;
 			float casttoint;
-			for (int i = 0, c, d; i < qtLb; i++) {
+			for (int c, d; lvi.iItem >= 0; lvi.iItem--) {
 				lvi.iSubItem = 0;
-				lvi.iItem = i;
 				ListView_GetItem(lv, &lvi);
 				switch (type) {
 				case INT_32BITS:
@@ -173,21 +175,23 @@ int PutDataInLV(string str, HWND& lv) {
 	fclose(file);
 	return 0;
 }
-int AddPortsNametoCB(COMMPORTS& cm, HWND& cb) {
+bool AddPortsNametoCB(COMMPORTS& cm, HWND& cb) {
 	HKEY key;
 	WCHAR bu[20], bu2[20];
-	DWORD sizet = sizeof(bu);
+	DWORD sizet = sizeof(bu), i;
 	RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"HARDWARE\\DEVICEMAP\\SERIALCOMM", 0, KEY_READ, &key);
 	cm.nCursel = SendMessage(cb, CB_GETCURSEL, 0, 0);
+	if (cm.nCursel == CB_ERR) {
+		cm.nCursel = 0;
+	}
 	DWORD status = ERROR_SUCCESS;
 	SendMessage(cb, CB_RESETCONTENT, 0, 0);
-	for (int i = 0;; i++, sizet = sizeof(bu)) {
+	for (i = 0;; i++, sizet = sizeof(bu)) {
 		status = RegEnumValue(key, i, bu2, &sizet, 0, NULL, (LPBYTE)bu, &sizet);
 		if (status == ERROR_NO_MORE_ITEMS) {
 			break;
 		}
 		if (status != ERROR_SUCCESS) {
-			status = -1;
 			break;
 		}
 
@@ -197,7 +201,8 @@ int AddPortsNametoCB(COMMPORTS& cm, HWND& cb) {
 			cm.cm.push_back(bu);
 		}
 	}
+	
 	SendMessage(cb, CB_SETCURSEL, cm.nCursel, 0);
 	RegCloseKey(key);
-	return status;
+	return cm.cm.size() > 0 && i > 0? true:false;
 }

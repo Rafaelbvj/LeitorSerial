@@ -1,14 +1,17 @@
 
 #include "Graficos.h"
 
-int Graficos::GNUScript(string str) {
+int Graficos::GNUScript(std::string &str) {
 	if(fileExist(str)<0 || !IsGNUPlotRunning()) {
 		return false;
 	}
-	string res = "load '" + str + "'\n";
+	std::string res = "load '" + str + "'\n";
 	return CmdLine(res);
 }
-bool Graficos::StartGNUPlotProgram(string strcmd) {
+std::string Graficos::GetGnuFilePath() const {
+	return GnuFilePath;
+}
+bool Graficos::StartGNUPlotProgram(std::string &strcmd) {
 	GnuFilePath.append(strcmd);
 	return StartGNUPlotProgram();
 }
@@ -46,7 +49,7 @@ Graficos::Graficos() :startgnu{ FALSE } {
 	GetCurrentDirectoryA(MAX_PATH, CurrentDirectory);
 }
 
-int Graficos::SetGnuFilePath(string pf) {
+int Graficos::SetGnuFilePath(std::string pf) {
 	if (pf.empty()) {
 		return -1;
 	}
@@ -61,7 +64,7 @@ int Graficos::SetGnuFilePath(string pf) {
 bool Graficos::IsGNUPlotRunning() {
 	return startgnu;
 }
-int Graficos::fileExist(string path) {
+int Graficos::fileExist(std::string &path) {
 	if (!fopen_s(&script, path.c_str(), "r")) {		//Success
 		fclose(script);
 		return 1;
@@ -74,7 +77,7 @@ int Graficos::fileExist(string path) {
 	}
 	return 0;
 }
-int Graficos::CmdLine(string strcmd) {
+int Graficos::CmdLine(std::string strcmd) {
 	if (strcmd.empty()) {
 		return 0;
 	}

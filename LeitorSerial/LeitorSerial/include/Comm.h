@@ -5,14 +5,15 @@
 #include <string>
 #include <xlsxwriter.h>
 #include "ErrorList.h"
-#define FLOAT_32BITS	  1
-#define INT_32BITS		  0
+enum TypeFormat {
+		FLOAT_32BITS,
+		INT_32BITS
+	};
 using namespace std;
 typedef struct dataconf {
-	unsigned int msegs;					//Sampling duration
-	unsigned int prec;					//Precision
-	unsigned int ganho;					//Gain
-	char localfile[100];				//SD file local
+	unsigned int msegs;					//Tempo de amostragem
+	unsigned int prec;					//Precisão
+	unsigned int ganho;					//Ganho
 } DataConf;
 typedef struct data {
 	unsigned char signbegin[4];			//3 bytes for padding memory
@@ -23,7 +24,9 @@ typedef struct data {
 typedef struct commports{
 	vector <wstring> cm;
 	int nCursel{ 0 };
+	wstring portname;
 	DCB dcb{ 0 };
+	COMMCONFIG cc;
 	COMMTIMEOUTS ct{ 0 };
 }COMMPORTS;
 typedef struct filedata {
@@ -38,4 +41,4 @@ typedef struct fileheader {
 int SaveFile(string, HWND&, int);
 int PutDataInLV(string,HWND&);
 int ExportFile(string, HWND&,int, int);
-int AddPortsNametoCB(COMMPORTS&,HWND&);
+bool AddPortsNametoCB(COMMPORTS&,HWND&);
