@@ -5,7 +5,7 @@ Visual Studio 2019 --- solution version ---.
 Dependencies:  
 - **libxslxwriter**  
 - **zlib.lib** (and dll required)  
-- **gnuplot binary for windows** 
+- **gnuplot (at least 5.0) binary for windows** 
 # Leitor Serial
 ![alt text](https://i.ibb.co/MscCJZq/programa-print.png)
 # Circuit
