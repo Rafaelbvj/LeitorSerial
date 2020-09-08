@@ -6,7 +6,8 @@ Dependencies:
 - **libxslxwriter**  
 - **zlib.lib** (and dll required)  
 - **gnuplot binary for windows** 
-
+# Leitor Serial
+![alt text](https://i.ibb.co/MscCJZq/programa-print.png)
 # Circuit
 ![alt text](https://i.ibb.co/2vHDhvK/circuit.png)
 # Circuit standalone version
