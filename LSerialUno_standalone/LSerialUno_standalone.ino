@@ -2,8 +2,10 @@
 #include <LiquidCrystal_I2C.h>
 #define PD_SCK 2
 #define DOUT 3
-#define BOTAO_1 A1
-
+#define BOTAO_1 8     //Entrar
+#define BOTAO_2 7     //Sair
+#define POT_3 A0
+#define POT_4 A1
 /**********ADCHX611 class**************/
 
 #define GANHO_20MV 1
@@ -114,14 +116,16 @@ class Menu {
 /************ Paginas de usuario *************/
 bool Escolher_Ganho(LiquidCrystal_I2C &lcd, Menu &menu, int &gain) {
   unsigned long pot;
-  byte rcv = 0;
+  int rcv = LOW;
+  int sa = LOW;
   while (rcv != 'e') {
-    rcv = Serial.read();
+    rcv = digitalRead(BOTAO_2);
+    sa = digitalRead(BOTAO_1);
     pot = analogRead(0);
     lcd.clear();
     lcd.print("Ganho:");
     gain = menu.ShowVolume(lcd, 1, 4, 7, 0, pot);
-    if (rcv == 'c') {
+    if (sa == HIGH) {
       return true;
     }
     delay(100);
@@ -129,22 +133,25 @@ bool Escolher_Ganho(LiquidCrystal_I2C &lcd, Menu &menu, int &gain) {
   return false;
 }
 bool Escolher_Duracao(LiquidCrystal_I2C &lcd, Menu &menu, unsigned long &hour, unsigned long &minute) {
-  unsigned long pot;
-  byte rcv = 0;
-  while (rcv != 'e') {
-    rcv = Serial.read();
-    pot = analogRead(0);
+  unsigned long pot3, pot4;
+  int rcv = LOW;
+  int sa = LOW;
+  while (rcv == LOW) {
+    rcv = digitalRead(BOTAO_2);
+    sa = digitalRead(BOTAO_1);
+    pot3 = analogRead(POT_3);
+    pot4 = analogRead(POT_4);
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Duracao:");
-    hour = menu.ShowVolume(lcd, 0, 101, 10, 0, pot);
+    hour = menu.ShowVolume(lcd, 0, 101, 10, 0, pot3);
     lcd.setCursor(14, 0);
     lcd.print("h");
-    minute = menu.ShowVolume(lcd, 0, 60, 10, 1, pot);
+    minute = menu.ShowVolume(lcd, 0, 60, 10, 1, pot4);
     lcd.setCursor(13, 1);
     lcd.print("min");
     delay(100);
-    if (rcv == 'c') {
+    if (sa == HIGH) {
       return true;
     }
   }
@@ -160,6 +167,8 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 void setup() {
   Serial.begin(9600);
+  pinMode(BOTAO_1, INPUT);
+  pinMode(BOTAO_2, INPUT);
   adc.SetUpPin(PD_SCK, DOUT);
   adc.TurnOn();
   lcd.begin(16, 2);
@@ -170,71 +179,72 @@ void setup() {
 }
 
 unsigned long pot, pot2;
-long int tara[3] = {0, 0, 0};                       //Tara para cada ganho  
+long int tara[3] = {0, 0, 0};                       //Tara para cada ganho
 
 int selected;
+int rcv;
 void loop() {
   pot = analogRead(0);
   selected = menu.ShowOption(lcd, pot);
-  if (Serial.available() > 0) {
-    byte rcv = Serial.read();
-    if (rcv == 'c') {       //Substituir por botao
-      if (selected == 3) {                        //Sobre
-        while (rcv != 'e') {
-          rcv = Serial.read();
-          lcd.clear();
-          lcd.print("github.com/");
-          lcd.setCursor(0, 1);
-          lcd.print("Rafaelbvj");
-          delay(100);
-        }
+  rcv = digitalRead(BOTAO_1);
+  if (rcv == HIGH) {       //Substituir por botao
+    rcv = LOW;
+    if (selected == 3) {                        //Sobre
+      while (rcv == LOW) {
+        rcv = digitalRead(BOTAO_2);
+        lcd.clear();
+        lcd.print("github.com/");
+        lcd.setCursor(0, 1);
+        lcd.print("Rafaelbvj");
+        delay(100);
       }
-      else {
-        int ganho;
-        if (Escolher_Ganho(lcd, menu, ganho)) {
-          if (selected == 2) {                    //Tarar
-            while(true){
+    }
+    else {
+      int ganho;
+      if (Escolher_Ganho(lcd, menu, ganho)) {
+        if (selected == 2) {                    //Tarar
+          while (true) {
             if (adc.GetSignalNumber(ganho, tara[ganho - 1])) {
               Serial.println(tara[ganho - 1]);
               Serial.println(ganho);
               break;
             }
+          }
+        }
+        if (selected == 1) {                    //Leitura
+          long int res;
+          while (rcv == LOW) {
+            rcv = digitalRead(BOTAO_2);
+            if (adc.GetSignalNumber(ganho, res)) {
+              lcd.clear();
+              lcd.print(res - tara [ganho - 1]);
+              lcd.setCursor(13, 0);
+              lcd.print("bit");
+              Serial.print(tara[ganho - 1]);
+              Serial.print(" ");
+              Serial.println(res);
             }
           }
-          if (selected == 1) {                    //Leitura
-            long int res;
-            while (rcv != 'e') {
-              rcv = Serial.read();
-              if (adc.GetSignalNumber(ganho, res)) {
-                lcd.clear();
-                lcd.print(res - tara [ganho - 1]);
-                lcd.setCursor(13, 0);
-                lcd.print("bit");
-                Serial.print(tara[ganho - 1]);
-                Serial.print(" ");
-                Serial.println(res);
-              }
-            }
-          }
-
-          if (selected == 0) {                    //Gravar
-            unsigned long hour, minute;
-            if (Escolher_Duracao(lcd, menu, hour, minute)) {
-              Serial.println(hour);
-              Serial.println(minute);
-
-
-            }
-          }
-
-
         }
 
+        if (selected == 0) {                    //Gravar
+          unsigned long hour, minute;
+          if (Escolher_Duracao(lcd, menu, hour, minute)) {
+            Serial.println(hour);
+            Serial.println(minute);
+
+
+          }
+        }
+
+
       }
+
     }
-
-
   }
+
+
+
   delay(100);
 
 }

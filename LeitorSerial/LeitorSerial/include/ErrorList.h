@@ -15,7 +15,7 @@
 #define ErrorGetOverlappedResult L"Erro GetOverlappedResult."
 #define ErrorWriteFile L"Erro WriteFile."
 #define InfoTimeLimit L"Tempo de amostragem não definido ou invalido, por padrao a duraçao é de 60 segundos."
-#define WarningGnuRunning L"A ultima instância do GNUPlot sera fechada."
+#define WarningGnuRunning L"Para continuar a ultima instância do GNUPlot sera fechada."
 #define ErrorGnuPlotNotFound L"Erro ao iniciar GNUPlot. Verifique o caminho do executável ou se o programa foi instalado."
 #define WarningScriptNotLoad L"Não foi possível carregar o script."
 #define ErrorTimeOut L"Conexao expirou!"
