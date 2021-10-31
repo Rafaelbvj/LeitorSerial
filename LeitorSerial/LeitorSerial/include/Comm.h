@@ -3,7 +3,7 @@
 #include <CommCtrl.h>
 #include <vector>
 #include <string>
-#include <xlsxwriter.h>
+#include "xlsxwriter/xlsxwriter.h"
 #include "ErrorList.h"
 enum TypeFormat {
 		FLOAT_32BITS,

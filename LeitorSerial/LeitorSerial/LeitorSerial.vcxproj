@@ -98,6 +98,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(SolutionDir)$(ProjectName)\res;$(SolutionDir)$(ProjectName)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(ProjectName)\lib\win64;$(LibraryPath)</LibraryPath>
+    <ExecutablePath>$(SolutionDir)$(ProjectName)\lib\win64;$(ExecutablePath)</ExecutablePath>
+    <ReferencePath>$(VC_ReferencesPath_x64);$(SolutionDir)$(ProjectName)\lib\win64;</ReferencePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -133,7 +136,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>xlsxwriter.lib;zlib.lib;coamctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>xlsxwriter.lib;zlib.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
