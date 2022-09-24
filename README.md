@@ -8,7 +8,7 @@ Dependencies:
 - **gnuplot (at least 5.0) binary for windows** 
 # Leitor Serial
 ![alt text](https://i.ibb.co/MscCJZq/programa-print.png)
-# Circuit
+# Circuitry
 ![alt text](https://i.ibb.co/2vHDhvK/circuit.png)
-# Circuit standalone version
+# Circuitry for standalone version
 ![alt text](https://i.ibb.co/c6T68kY/circuit-standalone.png)
